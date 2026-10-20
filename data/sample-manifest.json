@@ -1,0 +1,660 @@
+{
+  "bundle_version": "1",
+  "study_seed": "pe-real-pocqi-v1",
+  "sample_size": 100,
+  "sampling": "stratified by specialty; proportional allocation (largest remainder, min 1); hashSort within stratum; hashSort overall order",
+  "source_repository": "DaneshjouLab/Medical-LLM-Self-Preference",
+  "source_commit": "a40d3617a2e55cb6fe4255198a4b05ba774c3f4c",
+  "source_dataset": "jjfenglab/Real-POCQi",
+  "source_files": {
+    "questions": {
+      "path": "data/question_sets/real_pocqi_questions.jsonl",
+      "sha256": "61e2e5e5c0d4fd6c5e62227739ed7cfc303aeda4137fb9651ef8a1d82cb44b60"
+    },
+    "generations": {
+      "path": "data/outputs/generations/real_pocqi_generations.jsonl",
+      "sha256": "288149c7d14a1efe3a0810d23992a8d55d01182f038d36c64ce1949525bdbd14"
+    },
+    "judgments": {
+      "path": "data/real_pcoqi/judgements/rubric_and_model_ranking.jsonl",
+      "sha256": "1d812cfb5f6380d1b118f03314df7e12604688a0f653f565a43e1ae50272d7f9"
+    }
+  },
+  "judging_experiment_id": "real_pocqi_combined_all_judges_v1",
+  "judging_condition": "rubric_and_model_ranking",
+  "judgment_selection": "status=succeeded, experiment_id=production, last row per (question_id, judge_model) in file order",
+  "allocation_by_specialty": {
+    "Allergy & Immunology": 3,
+    "Anesthesiology": 2,
+    "Cardiology": 9,
+    "Critical Care": 2,
+    "Dermatology": 6,
+    "Emergency Medicine": 1,
+    "Endocrinology": 9,
+    "Family Medicine": 2,
+    "Gastroenterology": 2,
+    "Genetics": 1,
+    "Hospital-Based Medicine": 1,
+    "Infectious Disease": 5,
+    "Internal Medicine": 3,
+    "Nephrology": 3,
+    "Neurology": 5,
+    "OB / GYN": 7,
+    "Oncology / Hematology": 8,
+    "Ophthalmology": 1,
+    "Orthopedics": 2,
+    "Otolaryngology": 1,
+    "Pediatrics": 3,
+    "Primary Care": 2,
+    "Psychiatry": 4,
+    "Pulmonology": 2,
+    "Radiology": 1,
+    "Rheumatology": 6,
+    "Surgery": 4,
+    "Surgical Oncology": 2,
+    "Transplantation": 2,
+    "Urology": 1
+  },
+  "sampled_questions": [
+    {
+      "sample_index": 0,
+      "question_id": "1e30bec4-c70c-4af6-967f-a80fe8568277",
+      "specialty": "Rheumatology",
+      "question_text_sha256": "72add84a4cec7250b1624fe06f91434f7cf9a444318b8ffd30513816aaa2118a"
+    },
+    {
+      "sample_index": 1,
+      "question_id": "f6d2e29b-6040-4e45-be4f-a7a1a64a617e",
+      "specialty": "Endocrinology",
+      "question_text_sha256": "7976741206874772811871cd8d5f66a9f6ad69cd7fc1d04078d3aa4695e7776a"
+    },
+    {
+      "sample_index": 2,
+      "question_id": "40ec31e1-0aed-4512-bd97-da2c8afd3609",
+      "specialty": "Critical Care",
+      "question_text_sha256": "bf909c9326da82c7a47ba96782e0d2ce727f4a6d5d8027e462fa51aa05b7f86e"
+    },
+    {
+      "sample_index": 3,
+      "question_id": "147393e1-de09-42d9-b9e6-258f211451eb",
+      "specialty": "Nephrology",
+      "question_text_sha256": "fc1abbdfb0e2cc18b95f1a25551c968052b95f4d1765a2881352730be09f8a14"
+    },
+    {
+      "sample_index": 4,
+      "question_id": "8c833ccc-640c-450e-9132-893874cf7642",
+      "specialty": "Cardiology",
+      "question_text_sha256": "847ea892da83b886e6f48a65d1592b28fcdac3b7ed9df80b7ed3ad3a18baaded"
+    },
+    {
+      "sample_index": 5,
+      "question_id": "065212a4-8bc8-4106-a8f1-3739889b5d16",
+      "specialty": "Neurology",
+      "question_text_sha256": "6ba861581b5d8041e6c079df63042972a45f7297061db14bfd41f9ad0c67a26f"
+    },
+    {
+      "sample_index": 6,
+      "question_id": "8fc112d7-095e-4897-9e21-960516e5fba8",
+      "specialty": "Infectious Disease",
+      "question_text_sha256": "28894064c10eb6ddbf888210e080cfb9760bbfff8d7b5f9f486a4e219d2f1813"
+    },
+    {
+      "sample_index": 7,
+      "question_id": "f813362d-31e2-4166-954f-526a6f4fd04b",
+      "specialty": "Surgery",
+      "question_text_sha256": "dc7ee5ed3b7288e8fa9d27063ad6e0c70d2b8f73795d263eebeeb61f99567cc4"
+    },
+    {
+      "sample_index": 8,
+      "question_id": "fbdffcef-d90e-4fee-aea5-2be5f3f6dc40",
+      "specialty": "Internal Medicine",
+      "question_text_sha256": "eb100699b0b01fb9b84753930c528420978ad77b4788fcb243d932070ac99929"
+    },
+    {
+      "sample_index": 9,
+      "question_id": "0a3b4680-fbb8-4715-82c9-b160c31f40cf",
+      "specialty": "Surgery",
+      "question_text_sha256": "947c1d7c9fea3b707439e597d32de1da9b217ad429579b2471681477e3c72693"
+    },
+    {
+      "sample_index": 10,
+      "question_id": "6b57eee9-7107-4f46-b9c1-6dc7964cfadf",
+      "specialty": "Gastroenterology",
+      "question_text_sha256": "c7f1c857ba491193dac0982b9230ad64d621bbbdcde638b12a7f0898de71e2a6"
+    },
+    {
+      "sample_index": 11,
+      "question_id": "9b1a4758-2998-48d4-8622-cd8eee6b8424",
+      "specialty": "Anesthesiology",
+      "question_text_sha256": "d84c74709fe38af26548d86e85251ac1e0fc93d706c104738583790ab5b6a56c"
+    },
+    {
+      "sample_index": 12,
+      "question_id": "eacf7ea4-83a5-465b-9a7b-09ff88af37c1",
+      "specialty": "Rheumatology",
+      "question_text_sha256": "6d55dea367c9a613befd9284e6d95d63d45d11ac1956f0521b7fe8b2a1e1340b"
+    },
+    {
+      "sample_index": 13,
+      "question_id": "8bdafa4f-516d-46f8-b927-782aff96a549",
+      "specialty": "Oncology / Hematology",
+      "question_text_sha256": "8d3624c75a99533bd6c622d6afafde8ec88b5c3ed7bec4b739da05120922d18b"
+    },
+    {
+      "sample_index": 14,
+      "question_id": "86ec2df5-b67b-47db-bd2e-5b43af0cf33a",
+      "specialty": "OB / GYN",
+      "question_text_sha256": "6826760eb11342b5b6ea8f4046b4c9b1ddade57419882f0228eab845dfa8b4c3"
+    },
+    {
+      "sample_index": 15,
+      "question_id": "466709d9-8b7e-49ea-818f-ec4ac365fe19",
+      "specialty": "Gastroenterology",
+      "question_text_sha256": "60930709e3c1d95d8e7704e8cb50f62a6e71253829031257242f34e7a211458f"
+    },
+    {
+      "sample_index": 16,
+      "question_id": "24905de6-a1ab-458c-a358-4509c300b2fe",
+      "specialty": "Emergency Medicine",
+      "question_text_sha256": "1f46637c9173740e64f6b6f874a659c1985ff6f0ab89320f1c415b38c8b4ae35"
+    },
+    {
+      "sample_index": 17,
+      "question_id": "245015b7-7733-4857-bd42-d2eaf7df9464",
+      "specialty": "Oncology / Hematology",
+      "question_text_sha256": "06eeb472c49cf324ebdfff4f572341360598741d44d4455c85e499520f979ad7"
+    },
+    {
+      "sample_index": 18,
+      "question_id": "0db2f16c-4e75-487d-8f18-c86adf050e5b",
+      "specialty": "Oncology / Hematology",
+      "question_text_sha256": "74c8b82eb3c1b80c1a2b415ad931aa9766e7c3f08f407517edacf96f6a518587"
+    },
+    {
+      "sample_index": 19,
+      "question_id": "26e0e621-c6b2-4ff8-a48f-c88f5b98ecec",
+      "specialty": "Genetics",
+      "question_text_sha256": "1471d37839a2f03ce84e6fdb4dc90dc839137fe23d2f79e2688e32675b1ec9d3"
+    },
+    {
+      "sample_index": 20,
+      "question_id": "1ba1604e-256f-464e-8c6d-e67ebe23631f",
+      "specialty": "Pediatrics",
+      "question_text_sha256": "b2619d0a73855c7b8a6856ad0c6cc5097afc642d664ac8f71294e0306c22567c"
+    },
+    {
+      "sample_index": 21,
+      "question_id": "0b2881a1-e68e-44bf-98d4-957aa3d68f3f",
+      "specialty": "Rheumatology",
+      "question_text_sha256": "6394e53665eecea0b2c7049a9a109ad08ee71acee2f2e814a0e34c479c87f52e"
+    },
+    {
+      "sample_index": 22,
+      "question_id": "c157e756-e008-4485-9824-7e2e96ce8c9a",
+      "specialty": "Psychiatry",
+      "question_text_sha256": "40b6a3fe285c92f7601cf16263fb762232316f5b08760d2c7025cb554cd9fb1b"
+    },
+    {
+      "sample_index": 23,
+      "question_id": "befebf10-8802-4670-9060-8364a13f56c0",
+      "specialty": "Dermatology",
+      "question_text_sha256": "437a79aa45869fab1ee44dc7e815602f4522717437650de3e897d7526a59b415"
+    },
+    {
+      "sample_index": 24,
+      "question_id": "63ecb0ab-f121-4389-b801-ec4df485ec8d",
+      "specialty": "Surgery",
+      "question_text_sha256": "78ee90ca3a42253e2bc68bf01fd12cefb0d7d8a2fcb094f7785d96c242589b3b"
+    },
+    {
+      "sample_index": 25,
+      "question_id": "41b1cbcd-4a7e-4d54-bb06-7b6cb6a7ec65",
+      "specialty": "Cardiology",
+      "question_text_sha256": "cc719ca452b09c0ee9bc64686a77633f78d4c87c4c9500537a240a605467a6de"
+    },
+    {
+      "sample_index": 26,
+      "question_id": "6c4446ce-3ee2-42a9-bb4b-8d7bd366e4ef",
+      "specialty": "Infectious Disease",
+      "question_text_sha256": "c7f7e1ed9b4fde3624afd09146273d5a57b38aa59f8c77c23a7a74b89714124f"
+    },
+    {
+      "sample_index": 27,
+      "question_id": "c0be7071-1914-44b6-8119-39756aa1b222",
+      "specialty": "Cardiology",
+      "question_text_sha256": "1df9f96d85f3cb31ac7ba2adb74321db43513026793710004667dd162f39e98d"
+    },
+    {
+      "sample_index": 28,
+      "question_id": "2d66257d-2ac6-4e8c-806c-fb4af7f0b79f",
+      "specialty": "Transplantation",
+      "question_text_sha256": "76b5790049e7b1dfc146c2dbc32db0a41c266a69ee25e75e066104d201bb1749"
+    },
+    {
+      "sample_index": 29,
+      "question_id": "fa6e0270-d1d4-47e6-b12c-b84871c599da",
+      "specialty": "OB / GYN",
+      "question_text_sha256": "0633a2e51b821bb96c2470425fb291156c6c735aa64dc648acebd0c3a62d018f"
+    },
+    {
+      "sample_index": 30,
+      "question_id": "8b83a841-253a-4d25-98ee-109ae07f5141",
+      "specialty": "Cardiology",
+      "question_text_sha256": "0039b8d08b44a591f5b6ea3336f457c249fac3bfa3f0ffd419c7ca69f30dcb93"
+    },
+    {
+      "sample_index": 31,
+      "question_id": "258db532-dfb4-4507-8de7-7969f846f28c",
+      "specialty": "Oncology / Hematology",
+      "question_text_sha256": "7d6ba09e5077b99bb2a0d966f985c5de9ba54dfbbd0cda07e08b7ba5e49900e7"
+    },
+    {
+      "sample_index": 32,
+      "question_id": "0491057f-7f10-4b66-bf27-b027fae4565c",
+      "specialty": "Surgical Oncology",
+      "question_text_sha256": "9b90f8c64927ca6ca6f0aa4203407fe0172d1a68ebdb2155e31d392eede3ee18"
+    },
+    {
+      "sample_index": 33,
+      "question_id": "1c26e603-4dcf-4c07-857c-5d87db1d20f4",
+      "specialty": "Cardiology",
+      "question_text_sha256": "510a3fc0b74b5b24eed0ccd8072f63ded661e7b11f7319691a919befe392dde2"
+    },
+    {
+      "sample_index": 34,
+      "question_id": "d67ee15b-41b0-402c-9331-b277585bf791",
+      "specialty": "Rheumatology",
+      "question_text_sha256": "602316824a78dba3f02173466015f6a6f1e69400e7d76862ca958aedd6f1ebd8"
+    },
+    {
+      "sample_index": 35,
+      "question_id": "2f7eaad5-fff4-433e-8bab-ee3e825d1390",
+      "specialty": "OB / GYN",
+      "question_text_sha256": "26997c7d2b4b88c18114a67f3453d13204c8e5ac6735d1c7ec423f260aa49199"
+    },
+    {
+      "sample_index": 36,
+      "question_id": "c5802590-67ad-4fbf-a134-b98211dc786a",
+      "specialty": "Rheumatology",
+      "question_text_sha256": "51b3d7f2ea9743a553d44c38ecfad55fc6a9fbc4c8e2be063f743079bc558099"
+    },
+    {
+      "sample_index": 37,
+      "question_id": "644bf5ce-0674-4ef5-9bb3-7e7dbaad76c8",
+      "specialty": "OB / GYN",
+      "question_text_sha256": "d6961c9803c3cac692891f1a2c1a33095f100a813d30c08689711ac34488865f"
+    },
+    {
+      "sample_index": 38,
+      "question_id": "0f5b6ff2-0441-4f38-bdcc-97ffa20a2ac3",
+      "specialty": "Dermatology",
+      "question_text_sha256": "9fd7fb0da123cb20d8b84d2d603b15122909dddbdae9813fc490430d18f72ac2"
+    },
+    {
+      "sample_index": 39,
+      "question_id": "863f19bd-f4ff-4ef5-b73b-a84fe226690c",
+      "specialty": "Endocrinology",
+      "question_text_sha256": "42c058480c29fb0e98a66575a45cc0d420e1350aa4deaca38690f250ea4233ec"
+    },
+    {
+      "sample_index": 40,
+      "question_id": "0e9e99f5-0600-4252-b018-3ac29deaf815",
+      "specialty": "Oncology / Hematology",
+      "question_text_sha256": "458a0e0b4a0d912baf6613a4efc27ae732c9abe453b1189c03377b3fbf8b4cc4"
+    },
+    {
+      "sample_index": 41,
+      "question_id": "d974ebf4-199d-4388-a322-6791d3e36498",
+      "specialty": "Hospital-Based Medicine",
+      "question_text_sha256": "f3102eee138e6a87e1063aed647fe34419040db46d4d4847d46932e4a2377531"
+    },
+    {
+      "sample_index": 42,
+      "question_id": "18972b64-8043-4ba5-ba67-803482bf81dd",
+      "specialty": "Family Medicine",
+      "question_text_sha256": "f7392d6e5c6ee26fc8fc75f7846937d254c7762e0415f5d6ecd3f66acabd8a4a"
+    },
+    {
+      "sample_index": 43,
+      "question_id": "5fcca67d-308d-410e-a1d8-8080458e3bb2",
+      "specialty": "OB / GYN",
+      "question_text_sha256": "023e7654441647f044edddb1259697fed31fcaf292189bca74d6b410464953b0"
+    },
+    {
+      "sample_index": 44,
+      "question_id": "e2a8acbb-d153-49f0-ad8f-e62bc63abd2c",
+      "specialty": "Otolaryngology",
+      "question_text_sha256": "aaac9d8a0d3e891dc0dd6967f916e6d9d08593ddef664dba8672901ce7fac7b1"
+    },
+    {
+      "sample_index": 45,
+      "question_id": "ba5ee80f-e041-45fc-ad96-062c55f1be58",
+      "specialty": "Oncology / Hematology",
+      "question_text_sha256": "af250f641d0d283cad2ee1136e4248e9ba574efd55128f4cd9d84f2ef44564f4"
+    },
+    {
+      "sample_index": 46,
+      "question_id": "96d8a8cc-2e16-44df-a30a-24d358dc5af3",
+      "specialty": "Family Medicine",
+      "question_text_sha256": "71158b040f10bf0199e9b5c06e6d55fbcae4a9e9ca15338b5b768f5febe28855"
+    },
+    {
+      "sample_index": 47,
+      "question_id": "a919e416-f77b-46bd-95b3-5d1388fcabdf",
+      "specialty": "Allergy & Immunology",
+      "question_text_sha256": "adbdd93be55e676d6ed4aa041854b7b36be6b025fc5076bc0b5fdd0e940a6e18"
+    },
+    {
+      "sample_index": 48,
+      "question_id": "fd9d6e48-710a-45c4-a8bc-be35c89ef707",
+      "specialty": "Allergy & Immunology",
+      "question_text_sha256": "739f38101c8c5340588bbbf8cb72ebe8cb4fff46c13aa4cca6fea15110be7b07"
+    },
+    {
+      "sample_index": 49,
+      "question_id": "02b9afae-f5de-4175-80e5-9aa12067ec24",
+      "specialty": "Primary Care",
+      "question_text_sha256": "2cfcc9ce7632e9e3a4cfbc4a8e8827a84f97fe6ee09608ebb686486b1c3b7e3b"
+    },
+    {
+      "sample_index": 50,
+      "question_id": "b8ada464-0c87-4383-a0fa-62f69967dbdd",
+      "specialty": "Orthopedics",
+      "question_text_sha256": "24e0ea506ee8c7d7298c12364fe33574b2471031c24cccc271d8cfc87b8ced85"
+    },
+    {
+      "sample_index": 51,
+      "question_id": "064543ac-00c6-4b43-8fe8-e40c01e5c19c",
+      "specialty": "Endocrinology",
+      "question_text_sha256": "f8af33403f8ccaa3a05c3f1bd642567a2ff016b63c796d8e52dac34b363aac27"
+    },
+    {
+      "sample_index": 52,
+      "question_id": "78811f60-4f3d-46a5-883d-37e0d8de0350",
+      "specialty": "Endocrinology",
+      "question_text_sha256": "853720a3cd15dd6ccab358ece79dce3982513c97c7da8f8b5aff9613e301abaf"
+    },
+    {
+      "sample_index": 53,
+      "question_id": "c8685308-18e5-4e05-a623-bbb69432b018",
+      "specialty": "OB / GYN",
+      "question_text_sha256": "b128215b7aea50f2f518fff7d05f1316f600701b8eb4e03402685287d72a45e1"
+    },
+    {
+      "sample_index": 54,
+      "question_id": "4f59bea9-3f53-4633-9417-79122e18336a",
+      "specialty": "Endocrinology",
+      "question_text_sha256": "57ec8759693983792ec1772c04d2fd9b591e91cc63f572bc3c80910e9a0abef6"
+    },
+    {
+      "sample_index": 55,
+      "question_id": "03fc11c4-e95e-459b-8ca0-50417c00e74d",
+      "specialty": "Nephrology",
+      "question_text_sha256": "c9ad826fcc015e39fb9023e76561b3b5518e24eaf4caeab9862871221bc3bffc"
+    },
+    {
+      "sample_index": 56,
+      "question_id": "6f304d62-1797-4054-99d6-46b1cc4947a5",
+      "specialty": "Surgery",
+      "question_text_sha256": "a85f6dd1271a3cc38ddec67fe59ea4a07cbe492cc2cb75a7505dde9de994984c"
+    },
+    {
+      "sample_index": 57,
+      "question_id": "db317a9d-b40f-4e14-a6b1-81d6343597a4",
+      "specialty": "OB / GYN",
+      "question_text_sha256": "b3154ccc1573807c95f4d59fcaa4d78bb91b9795f5bb9315e06a9681246f8859"
+    },
+    {
+      "sample_index": 58,
+      "question_id": "05d7fe92-7253-42f3-8875-3b1ff5f97f61",
+      "specialty": "Pediatrics",
+      "question_text_sha256": "7854996d64e610f665563e0acb17dadf04cc071ab485b2031e6af5f5c4cdda1a"
+    },
+    {
+      "sample_index": 59,
+      "question_id": "86f5afde-37a0-4872-89a2-4ceecb40a97c",
+      "specialty": "Nephrology",
+      "question_text_sha256": "3742c5878e26a14bb1a9af4bf392f044b146840fc5f195eb707ad112d24dd752"
+    },
+    {
+      "sample_index": 60,
+      "question_id": "94889c1e-e28a-4cd1-91e2-d5a9cb628c39",
+      "specialty": "Cardiology",
+      "question_text_sha256": "3f5a7759076410afe337b45de6690b86f2704922a42a45a9ea678c875463c115"
+    },
+    {
+      "sample_index": 61,
+      "question_id": "08022400-6580-40f5-ad02-63f7014ae985",
+      "specialty": "Cardiology",
+      "question_text_sha256": "8f9cd25cad04be9ba81ea7cbf848fdadc85a053c257e24066ace0b1a42b710a5"
+    },
+    {
+      "sample_index": 62,
+      "question_id": "205007d8-18f6-4891-abd6-9e83866d5204",
+      "specialty": "Neurology",
+      "question_text_sha256": "55842b6347fd807926864a50303d218050c177169e22d2073ba8b02c82e0626d"
+    },
+    {
+      "sample_index": 63,
+      "question_id": "dc3106bf-b213-40a4-bf94-53219b484539",
+      "specialty": "Radiology",
+      "question_text_sha256": "c1da02bd44625e2135077da4f18e10baa349d0173c4b828c9831967797f3068b"
+    },
+    {
+      "sample_index": 64,
+      "question_id": "c54187ac-2149-4e19-be10-2f7e22b5a938",
+      "specialty": "Neurology",
+      "question_text_sha256": "151fa59fda0b8041699b739f660460be80bc726b1eeace862d84ac4e470b1cb8"
+    },
+    {
+      "sample_index": 65,
+      "question_id": "1aa660ca-b65a-4a37-98cd-4ca19110e397",
+      "specialty": "Infectious Disease",
+      "question_text_sha256": "d5a7ec784c59c229e95efd1ca3dc8c04828618f5ef86d0da08555c904da88979"
+    },
+    {
+      "sample_index": 66,
+      "question_id": "582f49b3-fc45-4e10-8853-cd6572f94195",
+      "specialty": "Internal Medicine",
+      "question_text_sha256": "2244fba05d1df590fe85388a2d1827f6671ad170c0de7b0a5fbb735cba646f59"
+    },
+    {
+      "sample_index": 67,
+      "question_id": "a6b99587-67c7-40d9-a2d9-3b1ac557c223",
+      "specialty": "Neurology",
+      "question_text_sha256": "ede771d3acb07d3756cd8be501e704f2a3fc1ca5fdb718a9c969bae353f6370c"
+    },
+    {
+      "sample_index": 68,
+      "question_id": "34d58159-a7be-4979-85be-99e135f9b4f9",
+      "specialty": "Endocrinology",
+      "question_text_sha256": "300754ee88bfc890583e42bed24cf8f414449a5bc13d39bc5022b6aa801e63c8"
+    },
+    {
+      "sample_index": 69,
+      "question_id": "0bcd724e-30ba-41ed-96b6-f1594d5eb192",
+      "specialty": "Cardiology",
+      "question_text_sha256": "aff367117b295ef5b0a27f785611f27745c3b48123f7650aef15de1e809be855"
+    },
+    {
+      "sample_index": 70,
+      "question_id": "29799072-170b-46a5-817c-f5ffb9433286",
+      "specialty": "Internal Medicine",
+      "question_text_sha256": "93822fe6478c233f86d6d8728f9c953a96b4ec2476349139893642a9570e6c4d"
+    },
+    {
+      "sample_index": 71,
+      "question_id": "b1feb93d-6c48-42fd-8108-f5d077787541",
+      "specialty": "Psychiatry",
+      "question_text_sha256": "c36a4677f9b7bc0c4885215d3f021640bdfbc891c9322854ef7b3e27f0eadd1f"
+    },
+    {
+      "sample_index": 72,
+      "question_id": "7deae12d-f2c9-4869-9470-4f1bfd70b86a",
+      "specialty": "Endocrinology",
+      "question_text_sha256": "107ef3908c891d1af9127ceae21e4b87e2f74fa1984425d6bd3134fe4266c45c"
+    },
+    {
+      "sample_index": 73,
+      "question_id": "81ca5a96-75b1-48fd-9c24-64c1edd9f0d9",
+      "specialty": "Dermatology",
+      "question_text_sha256": "a1749395dc4907cc94d60ece07f38636edf8f6f40b04b1deb09d91e00e556215"
+    },
+    {
+      "sample_index": 74,
+      "question_id": "118415fb-c446-4f1a-9ba4-a75c4ce338f3",
+      "specialty": "Pulmonology",
+      "question_text_sha256": "8094ccf6f5f22091cdd6404309e7445f460dd92ff75b97d8d2c2d31a787d7c5f"
+    },
+    {
+      "sample_index": 75,
+      "question_id": "598141cf-c732-42ac-b607-d6e8fecf92d4",
+      "specialty": "Urology",
+      "question_text_sha256": "64365abe6e28f95f2190e2142bc460bbaef99f1e57ab5e93213a5f1573b8f8b9"
+    },
+    {
+      "sample_index": 76,
+      "question_id": "b9fe2253-4f5c-4891-99af-2020bd6a7220",
+      "specialty": "Dermatology",
+      "question_text_sha256": "dd8685955f2f290ec7e1e6b904e918d8cd3954f2292003c37bbad665045a2cf2"
+    },
+    {
+      "sample_index": 77,
+      "question_id": "1e45e014-c0cf-4c93-ba3e-0d61da24d015",
+      "specialty": "Critical Care",
+      "question_text_sha256": "0800e4dd96a8814f51d8e881c1b9f87a0c4f24df168152d2e6bff5dc4dcbd6be"
+    },
+    {
+      "sample_index": 78,
+      "question_id": "ac17f31c-fdb8-41eb-9b3c-09a30e4304c1",
+      "specialty": "Transplantation",
+      "question_text_sha256": "8bcc11c3488ddf393db0cd0e605c6c6ffa773063778d16a2876810fc0fcc847d"
+    },
+    {
+      "sample_index": 79,
+      "question_id": "f42d92c3-152f-46d2-b586-8d15909f2ccd",
+      "specialty": "Oncology / Hematology",
+      "question_text_sha256": "33c392c4bc35195075c5f072d99d0126043646b57b8e7d95078592f912b8a39d"
+    },
+    {
+      "sample_index": 80,
+      "question_id": "45b205af-f8ef-4b71-97a6-683ffc049b39",
+      "specialty": "Psychiatry",
+      "question_text_sha256": "77f25b305459b9947521dcbdfe2383064d769b83d6cb181c399d381534fb0ad1"
+    },
+    {
+      "sample_index": 81,
+      "question_id": "2cef781c-7e47-4355-ba0e-c22ccea92066",
+      "specialty": "Endocrinology",
+      "question_text_sha256": "75ed51283753548aa746fb15440c2f7081b8b19ca32dc4f9b6136ab3d44c6a65"
+    },
+    {
+      "sample_index": 82,
+      "question_id": "150c8362-0b46-4d76-b0a8-abade612cab5",
+      "specialty": "Primary Care",
+      "question_text_sha256": "512b061fd4f49a29b0e069747c9bf20d1ee17290557f9edf8edf5fa96c088c04"
+    },
+    {
+      "sample_index": 83,
+      "question_id": "0640530b-7acf-49c5-b4df-3ffc3356822b",
+      "specialty": "Pediatrics",
+      "question_text_sha256": "a9e149ec4030124b07eb606a81f73de243213d422d0b9f2f7b9f1ec55dfb2446"
+    },
+    {
+      "sample_index": 84,
+      "question_id": "d43a0877-2d88-4348-809c-2462f567f713",
+      "specialty": "Oncology / Hematology",
+      "question_text_sha256": "96c821c7dc02e7897c9b079b595b0785a835af50a20682fb5b6e8665975ef4af"
+    },
+    {
+      "sample_index": 85,
+      "question_id": "be2fd7e4-3a4e-4e0e-b297-729392db16b4",
+      "specialty": "Infectious Disease",
+      "question_text_sha256": "4fc1e95fa710b41b8c0ec9cbdf26ed82f103e0bbbd38a6f739a4859a2857dc59"
+    },
+    {
+      "sample_index": 86,
+      "question_id": "e9bfce86-620c-44ed-a543-b583cc0ec2e2",
+      "specialty": "Orthopedics",
+      "question_text_sha256": "05354150ea683fa9056fd0ba30535206e2932145d2b01bb90346a1b4ab5dec93"
+    },
+    {
+      "sample_index": 87,
+      "question_id": "0049403c-14f3-42c6-a458-c3e8c23ff06b",
+      "specialty": "Psychiatry",
+      "question_text_sha256": "877061ecca86312dded8d47bea54805ecb2a40666fb58fff2a26ff71985d6e32"
+    },
+    {
+      "sample_index": 88,
+      "question_id": "827d97b9-726d-4a3d-8b6d-b5645bfe84db",
+      "specialty": "Dermatology",
+      "question_text_sha256": "b94a43d8893d46f82936be0992053b1a96495800a58fbe49370240756ae10d64"
+    },
+    {
+      "sample_index": 89,
+      "question_id": "3b860f49-a5ee-4aea-be7f-35886cfc9a08",
+      "specialty": "Surgical Oncology",
+      "question_text_sha256": "545d1a880e9139090f9487987660f243d7e949b395e55ae8bc3ae72cbe919d57"
+    },
+    {
+      "sample_index": 90,
+      "question_id": "d82bf66f-37d1-4442-b3b8-447148b4b44c",
+      "specialty": "Dermatology",
+      "question_text_sha256": "99dd588ca7335f7739488728934d851992792259891b2d7485b4211f0b6f3f53"
+    },
+    {
+      "sample_index": 91,
+      "question_id": "3830cec6-217f-4675-b23f-2d0c6d8994c8",
+      "specialty": "Ophthalmology",
+      "question_text_sha256": "d078d8be13a954b459d5b78f943c28c8a0dc336615e7c6886562700908247d94"
+    },
+    {
+      "sample_index": 92,
+      "question_id": "7166ebd6-dae6-45ee-88d9-00e23af5a714",
+      "specialty": "Infectious Disease",
+      "question_text_sha256": "525d3d470b184781a8757ff8c85ecb45f7066c062a17d485a150ea702fc82ce2"
+    },
+    {
+      "sample_index": 93,
+      "question_id": "2010793f-a415-4c26-bd93-52ef3e1ef724",
+      "specialty": "Neurology",
+      "question_text_sha256": "59a1308cd77cb6203bcc4494fee917fcc71f3370721f48eeac2237ef04757c9b"
+    },
+    {
+      "sample_index": 94,
+      "question_id": "378674b4-691b-41a5-a37b-34547921ec3b",
+      "specialty": "Pulmonology",
+      "question_text_sha256": "8e50fd824b8b28db5fba9daca70121e18121a08fe46751d0961b99583e04da81"
+    },
+    {
+      "sample_index": 95,
+      "question_id": "01027fb8-7621-4c2f-8691-b48f2dc55534",
+      "specialty": "Allergy & Immunology",
+      "question_text_sha256": "7c33b7f0cc78feafadf4904d15aa0c0cbf4bda9ec8f2d48c1bc456d07f5ab714"
+    },
+    {
+      "sample_index": 96,
+      "question_id": "51f7aff7-059e-4b5a-a06c-03f2519aea56",
+      "specialty": "Cardiology",
+      "question_text_sha256": "62454193c91ce194d3f1cc6285d7b5ada19be6bb7dfde9e38d276473c88f5135"
+    },
+    {
+      "sample_index": 97,
+      "question_id": "04a941cf-b6ef-46d6-932e-ef8f5be7b189",
+      "specialty": "Endocrinology",
+      "question_text_sha256": "a17b8335ac1cc71b7b92cc291b89ebc109cfb60abd378427a0bbd74475b13df4"
+    },
+    {
+      "sample_index": 98,
+      "question_id": "1f31941b-4807-484f-8881-8a37696c5331",
+      "specialty": "Rheumatology",
+      "question_text_sha256": "01ef5cf6d9771334e190bfae694e9cecf187eae984c173cd4565734a489d0f1a"
+    },
+    {
+      "sample_index": 99,
+      "question_id": "a0d008c9-3930-4b1b-8dab-e141065e8dad",
+      "specialty": "Anesthesiology",
+      "question_text_sha256": "3169d8754d3a15d01baf3a16d6a1e54709c07f20d8f59ddfad41276e4a2d8511"
+    }
+  ]
+}

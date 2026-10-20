@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Local database, downloaded source repository and prepared data (contain the protected model mapping)
+.data/
+.source/
+data/prepared/
+
+# Secrets
+.env
+.env.*
+!.env.example
