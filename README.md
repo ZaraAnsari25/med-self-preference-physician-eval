@@ -49,6 +49,23 @@ never modified.
 
 Requirements: Node.js 20.9 or newer, and git. You do not need git-lfs, Docker or Postgres.
 
+### Quick start (try the prototype)
+
+```bash
+npm install
+npm run demo
+```
+
+Then open http://localhost:3123 and sign in as `reviewer1`, `reviewer2` or `admin`, with the
+password `physicantest`.
+
+`npm run demo` downloads the research data (about 200 MB, first run only), prepares the
+5-question prototype, creates the demo accounts and starts the app. Running it again keeps
+the accounts and any saved grading. These demo accounts are for local testing only; never
+use them for real reviewers.
+
+### Step by step
+
 ```bash
 npm install
 
@@ -64,7 +81,8 @@ npm run data:fetch
 npm run data:prepare
 
 # 3. Prototype: import the first 5 sampled questions, create admin + reviewer1 +
-#    reviewer2, and assign the same 5 questions to both reviewers. Passwords are printed once.
+#    reviewer2, and assign the same 5 questions to both reviewers. The password is
+#    DEMO_PASSWORD if set, otherwise "physicantest".
 npm run demo:seed
 
 npm run dev    # http://localhost:3000

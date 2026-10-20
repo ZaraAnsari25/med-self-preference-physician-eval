@@ -1,18 +1,20 @@
 // Local prototype setup: import the first 5 sampled questions, create one admin
 // and two reviewers, and assign the same 5 questions to both reviewers.
-// For local development only. Prints generated passwords once.
+// For local development only. Demo accounts use DEMO_PASSWORD (default
+// "physicantest"); never use these accounts for real reviewers.
 import { readFileSync } from "node:fs";
 import { eq } from "drizzle-orm";
 import { openFromEnv } from "../src/db";
 import { users } from "../src/db/schema";
 import { assignItems, validateStudyData } from "../src/server/admin";
-import { createUser, generatePassword } from "../src/server/auth";
+import { createUser } from "../src/server/auth";
 import { importBundle, type StudyBundle } from "../src/server/importer";
 
 if (process.env.DATABASE_URL) {
   console.error("Refusing to seed demo accounts into DATABASE_URL; demo:seed is for local PGlite only.");
   process.exit(1);
 }
+const password = process.env.DEMO_PASSWORD || "physicantest";
 const handle = openFromEnv();
 await handle.migrate();
 const db = handle.db;
@@ -31,7 +33,6 @@ for (const acct of accounts) {
     console.log(`${acct.username}: already exists (${existing.reviewerCode})`);
     continue;
   }
-  const password = generatePassword();
   const u = await createUser(db, { ...acct, password });
   console.log(`${acct.username} (${acct.role}, ${u.reviewerCode}) password: ${password}`);
   if (acct.role === "reviewer") await assignItems(db, u.userId, { start: 0, count: 5 });
