@@ -3,35 +3,47 @@
 A web platform for collecting **blinded physician evaluations** of the clinical answers
 studied in *"The Judge Is Not Impartial: Self-Preference in Medical LLM Evaluation."*
 
-For each assigned question, a physician sees the original Real-POCQi question and the
-eight original model answers, shown as Responses A–H with model identity hidden. They:
+It covers both datasets from the paper, as **separate studies** with their own
+instructions, rubric wording, progress and submission:
 
-- score each answer on the study's five-axis rubric (0–5);
-- rank all eight answers from best to worst, with no ties and an explicit confirmation;
+| Study | What the AI did | What physicians see per item |
+|---|---|---|
+| **Real-POCQi** (single-turn) | Answered a physician's clinical question as a specialist | The question, its specialty, and the 8 original answers (Responses A–H) |
+| **MedSP1000** (multi-turn) | Played the clinician in an 8-turn conversation with a simulated patient | The clinician-facing case information and the 8 original conversations (Conversations A–H); patient turns are context only |
+
+For every item, a physician:
+
+- scores each candidate on the study's five-axis rubric (0–5), using that study's wording;
+- ranks all eight from best to worst, with no ties and an explicit confirmation;
 - may optionally flag clinically significant errors (a separate instrument).
+
+Which model produced each candidate is hidden.
 
 The data are stored so that every physician judgment can be joined, by ID, to the
 original LLM judges' rankings and scores.
 
 The source data comes from
 [DaneshjouLab/Medical-LLM-Self-Preference](https://github.com/DaneshjouLab/Medical-LLM-Self-Preference),
-pinned at commit `a40d3617a2e55cb6fe4255198a4b05ba774c3f4c`. That repository is only read,
-never modified.
+pinned at commit `2e0462248e33ab391b7afa457f1e06a2d4408e97` ("Restore eight-model MedSP1000
+results"). That repository is only read, never modified.
 
 | Document | Contents |
 |---|---|
 | [docs/METHODS.md](docs/METHODS.md) | Data audit, sampling, randomization, blinding, limitations, pre-deployment checklist |
 | [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md) | Every exported column |
-| [data/sample-manifest.json](data/sample-manifest.json) | The frozen 100-question sample: question IDs, seed, source file hashes |
+| [data/sample-manifest.json](data/sample-manifest.json) | The frozen 100-question Real-POCQi sample: question IDs, seed, source file hashes |
+| [data/medsp1000-sample-manifest.json](data/medsp1000-sample-manifest.json) | The frozen 100-scenario MedSP1000 sample: scenario IDs, seed, source file hashes |
 
 ## Status
 
 | Done and tested locally | Not done |
 |---|---|
-| Data preparation from the pinned repo: all 620 questions validated, 100 sampled | Deployment to a hosted server |
-| 5-question prototype: login, instructions, grading, autosave, resume, submit, lock | Importing or assigning the full 100 questions (prepared, waiting for study-team approval) |
-| Admin dashboard: progress, assignment, reviewer accounts, reopen, instrument config, exports | MedSP1000 multi-turn data preparation (the schema and UI are ready for it; see METHODS §7) |
-| 33 unit/integration tests and 35 browser end-to-end checks | IRB, data-use and de-identification sign-off (see METHODS §8) |
+| Real-POCQi preparation: all 620 questions validated, 100 sampled | Deployment to a hosted server |
+| MedSP1000 preparation: all 200 scenarios validated (8 models, 8 turns), 100 sampled | The timed pilot and the real study plans (waiting for physicians and approvals) |
+| Grading for both studies: login, instructions, blinded grading, autosave, resume, submit, lock | MedSP1000 at 2, 4 or 6 visible turns (only the full 8-turn view is prepared) |
+| **Study plans:** calibration + rotating blocks, preview, apply, block progress | IRB, data-use and de-identification sign-off (see METHODS §9) |
+| Admin dashboard: progress, accounts (with specialty and years), reopen, exports | |
+| 64 unit/integration tests and browser end-to-end checks of both studies and the plan flow | |
 
 ## Stack
 
@@ -56,11 +68,21 @@ npm install
 npm run demo
 ```
 
-Then open http://localhost:3123 and sign in as `reviewer1`, `reviewer2` or `admin`, with the
-password `physicantest`.
+Then open http://localhost:3123 and sign in with the password `physicantest`:
 
-`npm run demo` downloads the research data (about 200 MB, first run only), prepares the
-5-question prototype, creates the demo accounts and starts the app. Running it again keeps
+| Username | What you see |
+|---|---|
+| `reviewer1`, `reviewer2` | Real-POCQi: 5 questions |
+| `sp-reviewer1`, `sp-reviewer2` | MedSP1000: 5 scenarios (8-turn conversations) |
+| `admin` | Dashboard and exports for both studies |
+
+`npm run demo` downloads the research data (about 290 MB, first run only), prepares and
+imports all 100 cases of each study, creates the demo accounts (each with 5 cases) and starts
+the app.
+
+To see study plans in action, run `npm run demo:seed -- --plans` once before starting. It adds
+16 test physicians (`plan-rp1`–`plan-rp8` and `plan-sp1`–`plan-sp8`, same password) and applies
+both plans: 4 calibration cases, 8 blocks of 12, 3 graders per case, so 40 cases each. Running it again keeps
 the accounts and any saved grading. These demo accounts are for local testing only; never
 use them for real reviewers.
 
@@ -69,20 +91,23 @@ use them for real reviewers.
 ```bash
 npm install
 
-# 1. Get the original research data at the pinned commit. The large LFS judgment file
-#    is downloaded from GitHub's media endpoint and checked against the sha256 in its
-#    LFS pointer.
+# 1. Get the original research data at the pinned commit. The two large LFS judgment
+#    files (Real-POCQi, MedSP1000 8-turn) are downloaded from GitHub's media endpoint,
+#    checked against the sha256 in their LFS pointers and cached in .source/lfs-cache.
 npm run data:fetch
 
-# 2. Build the study bundle deterministically. This validates all 620 questions and
-#    writes the 100-question stratified sample:
-#      data/prepared/study-bundle.json   gitignored; contains the model mapping
-#      data/sample-manifest.json         committed; no answer text or model mapping
+# 2. Build both study bundles deterministically. This validates all 620 Real-POCQi
+#    questions and all 200 MedSP1000 scenarios, and writes the frozen samples:
+#      data/prepared/study-bundle.json        gitignored; Real-POCQi, contains the model mapping
+#      data/prepared/medsp1000-bundle.json    gitignored; MedSP1000, contains the model mapping
+#      data/sample-manifest.json              committed; no answer text or model mapping
+#      data/medsp1000-sample-manifest.json    committed; no conversation text or model mapping
 npm run data:prepare
 
-# 3. Prototype: import the first 5 sampled questions, create admin + reviewer1 +
-#    reviewer2, and assign the same 5 questions to both reviewers. The password is
-#    DEMO_PASSWORD if set, otherwise "physicantest".
+# 3. Demo: import all prepared items, create admin, reviewer1/2 (Real-POCQi) and
+#    sp-reviewer1/2 (MedSP1000), and give each study's first 5 items to its two reviewers.
+#    Add `-- --plans` to also create 16 test physicians and apply both study plans.
+#    The password is DEMO_PASSWORD if set, otherwise "physicantest".
 npm run demo:seed
 
 npm run dev    # http://localhost:3000
@@ -119,6 +144,11 @@ Coverage of the QA list in the study brief:
 | Exports match the database; identities recoverable for analysis | `persistence.test.ts › exports`, e2e |
 | Long responses shown in full | e2e (character counts of rendered responses) |
 | Keyboard access | e2e ranks with Move up/down buttons and the keyboard drag handle |
+| MedSP1000: 8 conversations × 8 turns, patient turns as context, multi-turn rubric wording | `studies.test.ts`, e2e |
+| MedSP1000: patient-only script never included | `prepared-data.test.ts` (scans the real bundle against every scenario's patient script), `studies.test.ts` |
+| Studies kept separate: queues, submission, instructions, cross-study access (404) | `studies.test.ts`, e2e |
+| Study plan: calibration from distinct specialties, even specialty mix per block, 3 graders per case, 40 per physician, reproducible | `plan.test.ts`, `plans.test.ts`, e2e (preview → apply → physician sees 40) |
+| Hand a position to a replacement (built but switched off in the dashboard): nobody inherits half-finished work, every case keeps 3 graders | `plans.test.ts` |
 
 ## Configuration
 
@@ -131,13 +161,10 @@ Coverage of the QA list in the study brief:
 Copy `.env.example` to `.env`. Never commit `.env`, `data/prepared/`, `.source/` or `.data/`;
 all four are gitignored.
 
-The **instrument configuration** is changed on the admin dashboard, not through environment
-variables:
-- **Rubric:** required (all 40 scores), optional, or hidden.
-- **Error assessment:** shown or hidden.
-
-The configuration in force is stored with each assignment, so pilot arms (for example
-rubric vs. ranking-only) can be compared.
+The **grading instrument** is fixed to the study design: all five rubric scores are required
+for every answer, and the optional clinical-error question is shown. There is no setting for
+it on the admin dashboard. (The code still supports other configurations, and the one in force
+is recorded with each assignment, in case a pilot ever needs to compare them.)
 
 ## Deployment
 
@@ -158,8 +185,9 @@ It has been tested only locally. **No deployment has been done.**
 
    ```bash
    npm run data:fetch && npm run data:prepare
-   DATABASE_URL=... npm run db:import -- --limit 5     # prototype
-   DATABASE_URL=... npm run db:import                  # all 100, after approval
+   DATABASE_URL=... npm run db:import -- --limit 5                    # 5-item prototype of each study
+   DATABASE_URL=... npm run db:import -- --study real_pocqi           # all 100 Real-POCQi, after approval
+   DATABASE_URL=... npm run db:import -- --study medsp1000            # all 50 MedSP1000, after approval
    ```
 
    The importer is insert-only. It verifies that items already present are byte-identical,
@@ -171,7 +199,9 @@ It has been tested only locally. **No deployment has been done.**
      npm run user:create -- --username <name> --role admin
    ```
 
-   Then create reviewers and assign questions from the dashboard.
+   Then, on the dashboard, create the physician accounts (with specialty and years in
+   practice) and use **Study plans** to preview and apply each study's plan. Applying creates
+   every physician's cases at once and locks the plan.
 6. Build and start the app:
 
    ```bash
@@ -186,12 +216,12 @@ Physicians need only a browser and the credentials you give them.
 ## Project layout
 
 ```
-scripts/            fetch-source, prepare-data, import-bundle, create-user, seed-demo, migrate, e2e-prototype
-src/lib/            shared logic: rubric, evaluation state + validation, ordering, sampling/prep
+scripts/            fetch-source, prepare-data, prepare-medsp1000, import-bundle, create-user, seed-demo, migrate, e2e-prototype
+src/lib/            shared logic: studies, rubric, evaluation state + validation, ordering, study plan generator, sampling/prep
 src/db/             Drizzle schema + connection (PGlite or Postgres)
 drizzle/            SQL migrations
-src/server/         auth, evaluations (physician-facing), admin, exports, importer
-src/app/            pages + API routes
+src/server/         auth, evaluations (physician-facing), admin, plans, exports, importer
+src/app/            pages + API routes (physician pages live under /study/<real_pocqi|medsp1000>/…)
 src/components/     Workspace, ResponseCard, RankingPanel, QuestionNav, AdminPanel, …
 tests/              Vitest suites
 ```

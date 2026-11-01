@@ -15,6 +15,7 @@ import {
 } from "@/lib/evaluation";
 import { presentationLabels } from "@/lib/ordering";
 import { CRITERION_KEYS, type CriterionKey, type InstrumentConfig } from "@/lib/rubric";
+import { STUDY_IDS, type StudyId } from "@/lib/studies";
 import { getInstrumentConfig } from "./settings";
 
 export type AssignmentStatus = "not_started" | "in_progress" | "complete";
@@ -32,6 +33,7 @@ export interface PhysicianResponse {
 }
 
 export interface PhysicianItemPayload {
+  study: StudyId;
   position: number;
   total: number;
   item: {
@@ -58,6 +60,11 @@ export class EvaluationError extends Error {
   }
 }
 
+/** A reviewer's current assignments in a study (cases handed to a replacement are excluded). */
+function liveAssignments(reviewerId: string, study: StudyId) {
+  return and(eq(assignments.reviewerId, reviewerId), eq(assignments.study, study), isNull(assignments.transferredAt));
+}
+
 const COLUMN: Record<CriterionKey, keyof typeof responseEvaluations.$inferSelect> = {
   accuracy: "accuracy",
   clinical_utility: "clinicalUtility",
@@ -66,11 +73,11 @@ const COLUMN: Record<CriterionKey, keyof typeof responseEvaluations.$inferSelect
   completeness: "completeness",
 };
 
-export async function listQueue(db: DB, reviewerId: string): Promise<QueueEntry[]> {
+export async function listQueue(db: DB, reviewerId: string, study: StudyId): Promise<QueueEntry[]> {
   const rows = await db
     .select({ queuePosition: assignments.queuePosition, status: assignments.status })
     .from(assignments)
-    .where(eq(assignments.reviewerId, reviewerId))
+    .where(and(liveAssignments(reviewerId, study)))
     .orderBy(asc(assignments.queuePosition));
   return rows.map((r, i) => ({ position: i + 1, status: r.status }));
 }
@@ -81,11 +88,11 @@ export function resumePosition(queue: QueueEntry[]): number | null {
   return (queue.find((q) => q.status !== "complete") ?? queue[queue.length - 1]).position;
 }
 
-async function assignmentAt(db: DB, reviewerId: string, position: number) {
+async function assignmentAt(db: DB, reviewerId: string, study: StudyId, position: number) {
   const rows = await db
     .select()
     .from(assignments)
-    .where(eq(assignments.reviewerId, reviewerId))
+    .where(and(liveAssignments(reviewerId, study)))
     .orderBy(asc(assignments.queuePosition))
     .limit(1)
     .offset(position - 1);
@@ -120,9 +127,14 @@ function stateFromRows(
   return state;
 }
 
-export async function loadEvaluation(db: DB, reviewerId: string, position: number): Promise<PhysicianItemPayload> {
-  const a = await assignmentAt(db, reviewerId, position);
-  const [[item], resp, evals, [{ total }], [user], config] = await Promise.all([
+export async function loadEvaluation(
+  db: DB,
+  reviewerId: string,
+  study: StudyId,
+  position: number,
+): Promise<PhysicianItemPayload> {
+  const a = await assignmentAt(db, reviewerId, study, position);
+  const [[item], resp, evals, [{ total }], config] = await Promise.all([
     db
       .select({
         itemType: items.itemType,
@@ -143,8 +155,10 @@ export async function loadEvaluation(db: DB, reviewerId: string, position: numbe
       .from(responses)
       .where(eq(responses.itemId, a.itemId)),
     db.select().from(responseEvaluations).where(eq(responseEvaluations.assignmentId, a.assignmentId)),
-    db.select({ total: sql<number>`count(*)::int` }).from(assignments).where(eq(assignments.reviewerId, reviewerId)),
-    db.select({ submittedAt: users.submittedAt }).from(users).where(eq(users.userId, reviewerId)),
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(assignments)
+      .where(and(liveAssignments(reviewerId, study))),
     getInstrumentConfig(db),
   ]);
   const order = a.presentationOrder;
@@ -154,6 +168,7 @@ export async function loadEvaluation(db: DB, reviewerId: string, position: numbe
     throw new EvaluationError("Assignment order does not match the item's responses", 500);
   }
   return {
+    study,
     position,
     total,
     item,
@@ -167,7 +182,7 @@ export async function loadEvaluation(db: DB, reviewerId: string, position: numbe
     state: stateFromRows(labels, order, evals, a),
     status: a.status,
     revision: a.revision,
-    locked: user?.submittedAt !== null || a.submittedAt !== null,
+    locked: a.submittedAt !== null,
     config,
   };
 }
@@ -184,14 +199,19 @@ export interface SaveResult {
   problems: string[];
 }
 
-export async function saveEvaluation(db: DB, reviewerId: string, position: number, input: SaveInput): Promise<SaveResult> {
+export async function saveEvaluation(
+  db: DB,
+  reviewerId: string,
+  study: StudyId,
+  position: number,
+  input: SaveInput,
+): Promise<SaveResult> {
   const parsed = evaluationStateSchema.safeParse(input.state);
   if (!parsed.success) throw new EvaluationError(`Invalid evaluation: ${parsed.error.issues[0]?.message}`, 400);
   const state = parsed.data as EvaluationState;
 
-  const a = await assignmentAt(db, reviewerId, position);
-  const [user] = await db.select({ submittedAt: users.submittedAt }).from(users).where(eq(users.userId, reviewerId));
-  if (user?.submittedAt || a.submittedAt) {
+  const a = await assignmentAt(db, reviewerId, study, position);
+  if (a.submittedAt) {
     throw new EvaluationError("Evaluations have been submitted and are locked. Contact the study team to reopen.", 423);
   }
 
@@ -286,54 +306,63 @@ export async function saveEvaluation(db: DB, reviewerId: string, position: numbe
   });
 }
 
-export async function acknowledgeInstructions(db: DB, reviewerId: string) {
+export async function acknowledgeInstructions(db: DB, reviewerId: string, study: StudyId) {
   await db
     .update(users)
-    .set({ instructionsAcknowledgedAt: new Date() })
-    .where(and(eq(users.userId, reviewerId), isNull(users.instructionsAcknowledgedAt)));
+    .set({ instructionsAck: sql`${users.instructionsAck} || jsonb_build_object(${study}::text, ${new Date().toISOString()}::text)` })
+    .where(and(eq(users.userId, reviewerId), sql`not (${users.instructionsAck} ? ${study})`));
 }
 
 export interface SubmissionSummary {
+  study: StudyId;
   total: number;
   complete: number;
   incomplete: number[]; // 1-based positions
   submittedAt: Date | null;
 }
 
-export async function submissionSummary(db: DB, reviewerId: string): Promise<SubmissionSummary> {
-  const queue = await listQueue(db, reviewerId);
-  const [user] = await db.select({ submittedAt: users.submittedAt }).from(users).where(eq(users.userId, reviewerId));
+export async function submissionSummary(db: DB, reviewerId: string, study: StudyId): Promise<SubmissionSummary> {
+  const rows = await db
+    .select({ status: assignments.status, submittedAt: assignments.submittedAt })
+    .from(assignments)
+    .where(and(liveAssignments(reviewerId, study)))
+    .orderBy(asc(assignments.queuePosition));
+  const submitted = rows.length > 0 && rows.every((r) => r.submittedAt !== null);
   return {
-    total: queue.length,
-    complete: queue.filter((q) => q.status === "complete").length,
-    incomplete: queue.filter((q) => q.status !== "complete").map((q) => q.position),
-    submittedAt: user?.submittedAt ?? null,
+    study,
+    total: rows.length,
+    complete: rows.filter((r) => r.status === "complete").length,
+    incomplete: rows.flatMap((r, i) => (r.status === "complete" ? [] : [i + 1])),
+    submittedAt: submitted ? new Date(Math.max(...rows.map((r) => r.submittedAt!.getTime()))) : null,
   };
 }
 
-/** Final submission: only when every assigned question is complete. Freezes all evaluations. */
-export async function submitAll(db: DB, reviewerId: string): Promise<SubmissionSummary> {
-  const summary = await submissionSummary(db, reviewerId);
+/** Studies this reviewer has questions in, with progress. */
+export async function reviewerStudies(db: DB, reviewerId: string): Promise<SubmissionSummary[]> {
+  const all = await Promise.all(STUDY_IDS.map((study) => submissionSummary(db, reviewerId, study)));
+  return all.filter((s) => s.total > 0);
+}
+
+/** Final submission for one study: only when every question in it is complete. Freezes them. */
+export async function submitAll(db: DB, reviewerId: string, study: StudyId): Promise<SubmissionSummary> {
+  const summary = await submissionSummary(db, reviewerId, study);
   if (summary.submittedAt) return summary;
   if (summary.total === 0) throw new EvaluationError("No questions are assigned.", 400);
   if (summary.incomplete.length) {
     throw new EvaluationError(`Questions still incomplete: ${summary.incomplete.join(", ")}`, 400);
   }
   const now = new Date();
-  await db.transaction(async (tx) => {
-    await tx
-      .update(assignments)
-      .set({ submittedAt: now })
-      .where(and(eq(assignments.reviewerId, reviewerId), isNull(assignments.submittedAt)));
-    await tx.update(users).set({ submittedAt: now }).where(eq(users.userId, reviewerId));
-  });
+  await db
+    .update(assignments)
+    .set({ submittedAt: now })
+    .where(and(liveAssignments(reviewerId, study), isNull(assignments.submittedAt)));
   return { ...summary, submittedAt: now };
 }
 
-/** Admin-only: unlock a reviewer's submitted evaluations for revision. */
-export async function reopenSubmission(db: DB, reviewerId: string) {
-  await db.transaction(async (tx) => {
-    await tx.update(assignments).set({ submittedAt: null }).where(eq(assignments.reviewerId, reviewerId));
-    await tx.update(users).set({ submittedAt: null }).where(eq(users.userId, reviewerId));
-  });
+/** Admin-only: unlock a reviewer's submitted evaluations in one study for revision. */
+export async function reopenSubmission(db: DB, reviewerId: string, study: StudyId) {
+  await db
+    .update(assignments)
+    .set({ submittedAt: null })
+    .where(and(liveAssignments(reviewerId, study)));
 }

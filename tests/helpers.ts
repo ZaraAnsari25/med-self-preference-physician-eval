@@ -2,12 +2,13 @@
 // to exercise code paths; it is never shown to reviewers.
 import { openPglite, type DB } from "@/db";
 import { sha256Hex } from "@/lib/hash";
-import type { BundleItem } from "@/lib/prep/realPocqi";
+import type { BundleItem } from "@/lib/prep/bundle";
 import { responseIdFor } from "@/lib/prep/realPocqi";
 import { createUser } from "@/server/auth";
 import type { StudyBundle } from "@/server/importer";
 import { emptyEvaluationState, type EvaluationState } from "@/lib/evaluation";
 import { presentationLabels } from "@/lib/ordering";
+import type { StudyId } from "@/lib/studies";
 
 export const MODELS = [
   ["gpt-5.6-sol", "openai"],
@@ -20,15 +21,33 @@ export const MODELS = [
   ["Qwen/Qwen3.8-27B-FP8", "qwen"],
 ] as const;
 
-export function fixtureBundle(nItems: number): StudyBundle {
+/** Synthetic patient-only text: must never reach a physician payload. */
+export const FIXTURE_PRIVATE_CONTEXT = "SECRET-PATIENT-SCRIPT";
+
+export function fixtureBundle(
+  nItems: number,
+  study: StudyId = "real_pocqi",
+  opts: { specialties?: string[] } = {},
+): StudyBundle {
+  const specialties = opts.specialties ?? ["Fixture Specialty"];
+  const multi = study === "medsp1000";
   const items: BundleItem[] = Array.from({ length: nItems }, (_, i) => {
-    const qid = `fixture-q-${i}`;
+    const qid = `fixture-${study}-q-${i}`;
     const responses = MODELS.map(([model, fam], k) => {
-      const genId = `gen-fixture-${i}-${k}`;
-      const text = `[synthetic fixture response ${i}-${k}]\n\n**Bold** and a list:\n\n- one\n- two`;
+      const genId = `gen-fixture-${study}-${i}-${k}`;
+      const transcript = multi
+        ? Array.from({ length: 8 }, (_, t) => ({
+            role: (t % 2 === 0 ? "clinician" : "patient") as "clinician" | "patient",
+            content: `[synthetic turn ${t + 1} of conversation ${i}-${k}]`,
+          }))
+        : null;
+      const text = transcript
+        ? transcript.map((t) => `${t.role.toUpperCase()}: ${t.content}`).join("\n")
+        : `[synthetic fixture response ${i}-${k}]\n\n**Bold** and a list:\n\n- one\n- two`;
       return {
         response_id: responseIdFor(genId),
         response_text: text,
+        transcript,
         provenance: {
           generator_model: model,
           generator_family: fam,
@@ -43,7 +62,7 @@ export function fixtureBundle(nItems: number): StudyBundle {
     });
     const llm_judgments = MODELS.flatMap(([judge, judgeFam], jk) =>
       responses.map((r, rk) => ({
-        judgment_id: `judgment-${i}-${jk}`,
+        judgment_id: `judgment-${study}-${i}-${jk}`,
         judging_condition: "rubric_and_model_ranking",
         experiment_id: "fixture",
         judge_model: judge,
@@ -56,19 +75,21 @@ export function fixtureBundle(nItems: number): StudyBundle {
       })),
     );
     return {
-      item_id: `pocqi_${qid}`,
+      item_id: multi ? `medsp_${qid}__t8` : `pocqi_${qid}`,
+      study,
       source_question_id: qid,
       source_dataset: "fixture",
-      item_type: "single_turn" as const,
-      specialty: "Fixture Specialty",
-      question_text: `[synthetic fixture question ${i}]`,
+      item_type: multi ? ("multi_turn" as const) : ("single_turn" as const),
+      specialty: multi ? null : specialties.at(i % specialties.length)!,
+      question_text: `[synthetic fixture ${multi ? "case" : "question"} ${i}]`,
+      turn_count: multi ? 8 : null,
       sample_index: i,
       provenance: {},
       responses,
       llm_judgments,
     };
   });
-  return { meta: { study_seed: "test-seed" }, items };
+  return { meta: { study_seed: `test-seed-${study}` }, items };
 }
 
 export async function freshDb(): Promise<{ db: DB; close: () => Promise<void> }> {

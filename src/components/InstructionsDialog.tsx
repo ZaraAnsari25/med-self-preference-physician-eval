@@ -2,10 +2,21 @@
 
 import { useEffect, useRef } from "react";
 import type { InstrumentConfig } from "@/lib/rubric";
+import type { StudyId } from "@/lib/studies";
 import { InstructionsContent } from "./InstructionsContent";
 import { Button } from "./ui";
 
-export function InstructionsDialog({ open, onClose, config }: { open: boolean; onClose: () => void; config: InstrumentConfig }) {
+export function InstructionsDialog({
+  open,
+  onClose,
+  config,
+  study,
+}: {
+  open: boolean;
+  onClose: () => void;
+  config: InstrumentConfig;
+  study: StudyId;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -29,7 +40,7 @@ export function InstructionsDialog({ open, onClose, config }: { open: boolean; o
         </Button>
       </div>
       <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
-        <InstructionsContent config={config} />
+        <InstructionsContent config={config} study={study} />
       </div>
       <div className="flex justify-end border-t border-line px-6 py-3">
         <Button variant="primary" onClick={onClose}>

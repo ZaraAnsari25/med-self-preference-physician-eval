@@ -15,6 +15,8 @@ import { useState } from "react";
 import { Button, cx } from "./ui";
 
 interface Props {
+  /** "Response" or "Conversation". */
+  noun: string;
   labels: string[];
   ranking: string[] | null;
   confirmed: boolean;
@@ -26,7 +28,7 @@ interface Props {
   onJump: (label: string) => void;
 }
 
-export function RankingPanel({ labels, ranking, confirmed, modified, previews, disabled, onReorder, onConfirm, onJump }: Props) {
+export function RankingPanel({ noun, labels, ranking, confirmed, modified, previews, disabled, onReorder, onConfirm, onJump }: Props) {
   const [dragging, setDragging] = useState(false);
   const order = ranking ?? labels;
   const unranked = ranking === null;
@@ -49,8 +51,8 @@ export function RankingPanel({ labels, ranking, confirmed, modified, previews, d
   return (
     <div className="rounded-xl border border-line bg-surface">
       <div className="border-b border-line px-4 py-3">
-        <h2 className="font-semibold">Rank responses from best to worst</h2>
-        <p className="mt-0.5 text-xs text-muted">1 = best clinical response · {order.length} = worst · no ties</p>
+        <h2 className="font-semibold">Rank {noun.toLowerCase()}s from best to worst</h2>
+        <p className="mt-0.5 text-xs text-muted">1 = best {noun.toLowerCase()} · {order.length} = worst · no ties</p>
       </div>
 
       <div className="px-3 pt-3">
@@ -80,6 +82,7 @@ export function RankingPanel({ labels, ranking, confirmed, modified, previews, d
           <ol className="space-y-1.5 p-3" aria-label="Ranking, best first">
             {order.map((label, i) => (
               <RankRow
+                noun={noun}
                 key={label}
                 label={label}
                 rank={i + 1}
@@ -116,6 +119,7 @@ export function RankingPanel({ labels, ranking, confirmed, modified, previews, d
 }
 
 function RankRow({
+  noun,
   label,
   rank,
   total,
@@ -126,6 +130,7 @@ function RankRow({
   onDown,
   onJump,
 }: {
+  noun: string;
   label: string;
   rank: number;
   total: number;
@@ -158,7 +163,7 @@ function RankRow({
       <button
         type="button"
         className={cx("flex h-7 w-5 shrink-0 cursor-grab items-center justify-center text-muted active:cursor-grabbing", disabled && "cursor-not-allowed")}
-        aria-label={`Drag Response ${label}${muted ? "" : `, currently rank ${rank} of ${total}`}`}
+        aria-label={`Drag ${noun} ${label}${muted ? "" : `, currently rank ${rank} of ${total}`}`}
         {...attributes}
         {...listeners}
       >
@@ -167,7 +172,9 @@ function RankRow({
         </svg>
       </button>
       <button type="button" onClick={onJump} className="min-w-0 flex-1 text-left" title="Scroll to this response">
-        <div className="text-sm font-semibold">Response {label}</div>
+        <div className="text-sm font-semibold">
+          {noun} {label}
+        </div>
         <div className="truncate text-xs text-muted">{preview}</div>
       </button>
       <div className="flex shrink-0 flex-col">
@@ -175,7 +182,7 @@ function RankRow({
           type="button"
           onClick={onUp}
           disabled={disabled || rank === 1}
-          aria-label={`Move Response ${label} up`}
+          aria-label={`Move ${noun} ${label} up`}
           className="flex h-5 w-8 items-center justify-center rounded text-muted hover:bg-subtle hover:text-ink disabled:opacity-30"
         >
           <Chevron up />
@@ -184,7 +191,7 @@ function RankRow({
           type="button"
           onClick={onDown}
           disabled={disabled || rank === total}
-          aria-label={`Move Response ${label} down`}
+          aria-label={`Move ${noun} ${label} down`}
           className="flex h-5 w-8 items-center justify-center rounded text-muted hover:bg-subtle hover:text-ink disabled:opacity-30"
         >
           <Chevron />

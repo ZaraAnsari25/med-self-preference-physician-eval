@@ -1,12 +1,14 @@
 // Deterministic transformation of the original research artifacts into the
 // study bundle the app imports. Pure functions: no file or network access.
 import { hashSort, sha256Hex } from "../hash";
+import { RUBRIC_AXES as AXES, type BundleItem, type BundleJudgmentRow, type BundleResponse } from "./bundle";
+
+export type { BundleItem, BundleJudgmentRow, BundleResponse } from "./bundle";
 
 export const REAL_POCQI_DATASET = "jjfenglab/Real-POCQi";
 export const PRODUCTION_JUDGING_EXPERIMENT = "real_pocqi_combined_all_judges_v1";
 export const JUDGING_CONDITION = "rubric_and_model_ranking";
 export const EXPECTED_RESPONSES_PER_QUESTION = 8;
-const AXES = ["accuracy", "clinical_utility", "source_quality", "verifiability", "completeness"] as const;
 
 export interface SourceQuestion {
   question_id: string;
@@ -55,47 +57,6 @@ export interface SourceJudgment {
     scored_responses: { response_id: string; scores: Record<string, number> }[];
     model_ranking?: { response_ids: string[] };
   } | null;
-}
-
-export interface BundleResponse {
-  response_id: string;
-  response_text: string;
-  provenance: {
-    generator_model: string;
-    generator_family: string;
-    generation_id: string;
-    generation_key: string;
-    run_id: string;
-    experiment_id: string;
-    response_text_sha256: string;
-    metadata: Record<string, unknown>;
-  };
-}
-
-export interface BundleJudgmentRow {
-  judgment_id: string;
-  judging_condition: string;
-  experiment_id: string;
-  judge_model: string;
-  judge_family: string;
-  response_id: string;
-  generator_model: string;
-  judge_presentation_label: string;
-  original_rank: number;
-  scores: Record<(typeof AXES)[number], number>;
-}
-
-export interface BundleItem {
-  item_id: string;
-  source_question_id: string;
-  source_dataset: string;
-  item_type: "single_turn";
-  specialty: string;
-  question_text: string;
-  sample_index: number;
-  provenance: Record<string, unknown>;
-  responses: BundleResponse[];
-  llm_judgments: BundleJudgmentRow[];
 }
 
 /** Stable internal response ID derived from the original generation ID. */
@@ -267,11 +228,13 @@ export function buildItem(params: {
 
   return {
     item_id: `pocqi_${qid}`,
+    study: "real_pocqi",
     source_question_id: qid,
     source_dataset: question.source_dataset,
     item_type: "single_turn",
     specialty: question.specialty,
     question_text: question.question_text,
+    turn_count: null,
     sample_index: sampleIndex,
     provenance: {
       source_revision: question.source_revision,

@@ -1,19 +1,22 @@
 import { AdminPanel } from "@/components/AdminPanel";
 import { SimpleHeader } from "@/components/SimpleHeader";
-import { itemCount, reviewerProgress, validateStudyData } from "@/server/admin";
+import { STUDY_IDS, type StudyId } from "@/lib/studies";
+import { itemCounts, reviewerProgress, validateStudyData } from "@/server/admin";
 import { requirePageUser } from "@/server/http";
-import { getInstrumentConfig, getStudySeed } from "@/server/settings";
+import { defaultPlanSeed, eligibleReviewers, planStatus } from "@/server/plans";
+import { getStudySeed } from "@/server/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const { user, db } = await requirePageUser("admin");
-  const [reviewers, items, validation, config, seed] = await Promise.all([
+  const [reviewers, counts, validation, seeds, plans, eligible] = await Promise.all([
     reviewerProgress(db),
-    itemCount(db),
+    itemCounts(db),
     validateStudyData(db),
-    getInstrumentConfig(db),
-    getStudySeed(db),
+    Promise.all(STUDY_IDS.map(async (s) => [s, await getStudySeed(db, s)] as const)),
+    Promise.all(STUDY_IDS.map(async (s) => [s, await planStatus(db, s)] as const)),
+    Promise.all(STUDY_IDS.map(async (s) => [s, await eligibleReviewers(db, s)] as const)),
   ]);
   return (
     <>
@@ -21,13 +24,18 @@ export default async function AdminPage() {
       <AdminPanel
         reviewers={reviewers.map((r) => ({
           ...r,
-          submittedAt: r.submittedAt?.toISOString() ?? null,
-          lastSavedAt: r.lastSavedAt ? new Date(r.lastSavedAt).toISOString() : null,
+          studies: r.studies.map((st) => ({
+            ...st,
+            submittedAt: st.submittedAt?.toISOString() ?? null,
+            lastSavedAt: st.lastSavedAt?.toISOString() ?? null,
+          })),
         }))}
-        itemCount={items}
+        itemCounts={counts}
         validation={validation}
-        config={config}
-        studySeed={seed}
+        studySeeds={Object.fromEntries(seeds) as Record<StudyId, string | null>}
+        plans={Object.fromEntries(plans) as Record<StudyId, Awaited<ReturnType<typeof planStatus>>>}
+        eligible={Object.fromEntries(eligible) as Record<StudyId, Awaited<ReturnType<typeof eligibleReviewers>>>}
+        defaultPlanSeeds={Object.fromEntries(STUDY_IDS.map((s) => [s, defaultPlanSeed(s)])) as Record<StudyId, string>}
       />
     </>
   );

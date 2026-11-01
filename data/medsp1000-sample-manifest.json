@@ -1,0 +1,631 @@
+{
+  "bundle_version": "1",
+  "study": "medsp1000",
+  "study_seed": "pe-medsp1000-v1",
+  "sample_size": 100,
+  "visible_turns": 8,
+  "sampling": "simple random sample: hashSort of validated scenario IDs with `${seed}:order`, first N",
+  "source_repository": "DaneshjouLab/Medical-LLM-Self-Preference",
+  "source_commit": "2e0462248e33ab391b7afa457f1e06a2d4408e97",
+  "source_dataset": "byrLLCC/MedSP1000",
+  "source_files": {
+    "scenarios": {
+      "path": "data/question_sets/medsp1000_generation_cases.jsonl",
+      "sha256": "924326c64115a669d9a8d81a91cef3de8ae839495246775ea9bce90f838f8d35"
+    },
+    "conversations": {
+      "path": "data/outputs/medsp1000/generations.jsonl",
+      "sha256": "e3579f51f56b6ad045d2f553e08db4a65978f936bc91273d9ba2531bce6106f8"
+    },
+    "judgments": {
+      "path": "data/outputs/medsp1000/judgements/rubric_and_model_ranking.jsonl",
+      "sha256": "cca25daf5b96693d30db8cfea8d09cedf6b089a63acc12a9c6dcd1d5f26c6455"
+    }
+  },
+  "judging_experiment_id": "medsp1000_all_eight_judges_v2",
+  "judging_condition": "rubric_and_model_ranking (full 8-turn trajectory)",
+  "judgment_selection": "status=succeeded, experiment_id=medsp1000_all_eight_judges_v2, last row per (question_id, judge_model) in file order",
+  "shown_to_physicians": "question_text (clinician initialization) and transcript turns; private_patient_context excluded",
+  "sampled_scenarios": [
+    {
+      "sample_index": 0,
+      "question_id": "mep-13-10541-s001__scenario1",
+      "source_scenario_path": "mep-13-10541-s001/scenario1",
+      "question_text_sha256": "bf81095afc3dfef2c99ca868452e9c38da9fef60160f327c913b1b47e2d6a91e"
+    },
+    {
+      "sample_index": 1,
+      "question_id": "mededportal_9759__scenario1",
+      "source_scenario_path": "mededportal_9759/scenario1",
+      "question_text_sha256": "51cb962a900048ec3cddd26b6f1c0964c770dfde0dda117c987dd2ae6eaeb2a9"
+    },
+    {
+      "sample_index": 2,
+      "question_id": "mededportal_9525__scenario1",
+      "source_scenario_path": "mededportal_9525/scenario1",
+      "question_text_sha256": "b88055cd1805ba3d1d05b00a97637eee4f818978571a70589e4cd0fd232bdc20"
+    },
+    {
+      "sample_index": 3,
+      "question_id": "mededportal_9539__scenario4",
+      "source_scenario_path": "mededportal_9539/scenario4",
+      "question_text_sha256": "4ab21257207032d4268167deca0a3a4d09d1a52360ee4c9d69a5bd0766106268"
+    },
+    {
+      "sample_index": 4,
+      "question_id": "mededportal_7833__scenario2",
+      "source_scenario_path": "mededportal_7833/scenario2",
+      "question_text_sha256": "3408ece7d963b50ff8570d16c7ba5765c7da145f4cd36aee986706984643376e"
+    },
+    {
+      "sample_index": 5,
+      "question_id": "mep-15-10826-s001__scenario2",
+      "source_scenario_path": "mep-15-10826-s001/scenario2",
+      "question_text_sha256": "f0c78f5ca1c6fe13758079f302da7d8bbe2fba08001336038d0be1126c9d75ad"
+    },
+    {
+      "sample_index": 6,
+      "question_id": "mep_2374-8265.11163-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11163-s001/scenario1",
+      "question_text_sha256": "de7e7aae14d1aeeefcc6f779c6aa6e00c63ccd43957b1926beda1c6d8cc16c7b"
+    },
+    {
+      "sample_index": 7,
+      "question_id": "mededportal_10046__scenario2",
+      "source_scenario_path": "mededportal_10046/scenario2",
+      "question_text_sha256": "0ac39de3aae8b5a0cb764af4f45b60d6c260e7c51f8bf2e4b8420ecc7fb32937"
+    },
+    {
+      "sample_index": 8,
+      "question_id": "mededportal_9681__scenario1",
+      "source_scenario_path": "mededportal_9681/scenario1",
+      "question_text_sha256": "019262195fb787faf23b56ca6fba056457ada7652c7bf78e38e06f886933c40a"
+    },
+    {
+      "sample_index": 9,
+      "question_id": "mep_2374-8265.11149-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11149-s001/scenario1",
+      "question_text_sha256": "bde0d10d05ae521838596ab56788e14d4c136880ec5cd5e91f8a5c82f76ee820"
+    },
+    {
+      "sample_index": 10,
+      "question_id": "mep_2374-8265.11104-s001_1__scenario18",
+      "source_scenario_path": "mep_2374-8265.11104-s001_1/scenario18",
+      "question_text_sha256": "02de5bacccb944d36ac9e7308a5514ed9674f09390d07fa0157f0e6a6ad65de3"
+    },
+    {
+      "sample_index": 11,
+      "question_id": "mep_2374-8265.11298-s001__scenario4",
+      "source_scenario_path": "mep_2374-8265.11298-s001/scenario4",
+      "question_text_sha256": "3b423f61dd731f6fa78c2c347b96510b2f5da106190ce154cfab0d6070455107"
+    },
+    {
+      "sample_index": 12,
+      "question_id": "mep_2374-8265.11120-s001__scenario4",
+      "source_scenario_path": "mep_2374-8265.11120-s001/scenario4",
+      "question_text_sha256": "9fe40e7faaa6cbb5cce3ea97aec0119e2fedd0a47cce786feea98a8d151fff9a"
+    },
+    {
+      "sample_index": 13,
+      "question_id": "mededportal_10011__scenario2",
+      "source_scenario_path": "mededportal_10011/scenario2",
+      "question_text_sha256": "46427ea907b58fd6ba27460d70ab6d363096fe58d049dece7f5ba8c1fd526984"
+    },
+    {
+      "sample_index": 14,
+      "question_id": "mep_2374-8265.11248-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11248-s001/scenario1",
+      "question_text_sha256": "440b84c70b0feef18595f9b5ddbdf17980017210e25f97d93725ebf215b304c9"
+    },
+    {
+      "sample_index": 15,
+      "question_id": "mededportal_10373__scenario1",
+      "source_scenario_path": "mededportal_10373/scenario1",
+      "question_text_sha256": "654ae937cc6ea9529c5d1d4e0f9d3f8c743da36498fc6d823c3e8f66a0d929fb"
+    },
+    {
+      "sample_index": 16,
+      "question_id": "mededportal_8139__scenario1",
+      "source_scenario_path": "mededportal_8139/scenario1",
+      "question_text_sha256": "b6ce0ac07dec062cf0e829697614d7de033694bf0ea26575d52ac422363e5ed4"
+    },
+    {
+      "sample_index": 17,
+      "question_id": "mededportal_10373__scenario2",
+      "source_scenario_path": "mededportal_10373/scenario2",
+      "question_text_sha256": "fe65a110d06efcede92832470cbd5a7a0cde4dbd5926adb52039d3789808608e"
+    },
+    {
+      "sample_index": 18,
+      "question_id": "mededportal_9907__scenario1",
+      "source_scenario_path": "mededportal_9907/scenario1",
+      "question_text_sha256": "14101b88a2653fa1c0e026c51ecbe26bfb24ac25c85f5f74dab073eb4326e2c3"
+    },
+    {
+      "sample_index": 19,
+      "question_id": "mededportal_10166__scenario4",
+      "source_scenario_path": "mededportal_10166/scenario4",
+      "question_text_sha256": "e6f77c49277708371187d97dbb8880f5697a0354d2211603bfbfdaf9cebb40ab"
+    },
+    {
+      "sample_index": 20,
+      "question_id": "mededportal_9907__scenario2",
+      "source_scenario_path": "mededportal_9907/scenario2",
+      "question_text_sha256": "07cc157db6e71a8ab6c8e7d347a482601adbd674b29c17f777664922daa45983"
+    },
+    {
+      "sample_index": 21,
+      "question_id": "mep_2374-8265.11104-s001_1__scenario11",
+      "source_scenario_path": "mep_2374-8265.11104-s001_1/scenario11",
+      "question_text_sha256": "bc530e78c441f8e2594e96df10e74bdf72c77440b2e287359f2d10da54856ee1"
+    },
+    {
+      "sample_index": 22,
+      "question_id": "mep_2374-8265.11120-s001__scenario5",
+      "source_scenario_path": "mep_2374-8265.11120-s001/scenario5",
+      "question_text_sha256": "bba1a231b7d75efd6b2cdacdd665e5cdff80f0ec138abdfb38a71cb0804bd6d2"
+    },
+    {
+      "sample_index": 23,
+      "question_id": "mededportal_9087__scenario13",
+      "source_scenario_path": "mededportal_9087/scenario13",
+      "question_text_sha256": "ab211daa87776793f6f899d41326719096ee52b070ff3cd928623a53aa4a3291"
+    },
+    {
+      "sample_index": 24,
+      "question_id": "mep_2374-8265.11244-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11244-s001/scenario1",
+      "question_text_sha256": "c2bcf016b9f672dd1c44f73a4d33264110828124721af40b37c9a779223a9d99"
+    },
+    {
+      "sample_index": 25,
+      "question_id": "mededportal_7833__scenario3",
+      "source_scenario_path": "mededportal_7833/scenario3",
+      "question_text_sha256": "8550a71a09d52564d098e789204e922a8ca4d415de17a0c51ffd63ac5d008655"
+    },
+    {
+      "sample_index": 26,
+      "question_id": "mededportal_1132__scenario5",
+      "source_scenario_path": "mededportal_1132/scenario5",
+      "question_text_sha256": "b64f77cbee7cdbf313defc22cd9ee7f8c08859d4c5caca02ed4e19d49a5d7e13"
+    },
+    {
+      "sample_index": 27,
+      "question_id": "mededportal_9087__scenario1",
+      "source_scenario_path": "mededportal_9087/scenario1",
+      "question_text_sha256": "5e5af1cabf5e49956449d619e4853d68acefd88df7f2a71ef6d1f18de728f048"
+    },
+    {
+      "sample_index": 28,
+      "question_id": "mep_2374-8265.10873-s001__scenario4",
+      "source_scenario_path": "mep_2374-8265.10873-s001/scenario4",
+      "question_text_sha256": "efb9370ebbe749be0468bb52c1714534cdd96c9440cb711a9b0331b84ef971e6"
+    },
+    {
+      "sample_index": 29,
+      "question_id": "mededportal_9089__scenario2",
+      "source_scenario_path": "mededportal_9089/scenario2",
+      "question_text_sha256": "97ed2090a5c3fed7f801fd5bcb7cb981be3f0d92f65466b3ee7ac77b2fa0e02a"
+    },
+    {
+      "sample_index": 30,
+      "question_id": "mededportal_9026__scenario1",
+      "source_scenario_path": "mededportal_9026/scenario1",
+      "question_text_sha256": "bbc30645fc67ddebd53dad7bd02b4da885c6d7e37898d8fa8c0cb5cab92be797"
+    },
+    {
+      "sample_index": 31,
+      "question_id": "mep-15-10857-s001__scenario1",
+      "source_scenario_path": "mep-15-10857-s001/scenario1",
+      "question_text_sha256": "4a9b02c08eb87bad54b0757b913fb020989a5ee5a0a8b065633b2fea5803f576"
+    },
+    {
+      "sample_index": 32,
+      "question_id": "mep_2374-8265.11249-s001__scenario2",
+      "source_scenario_path": "mep_2374-8265.11249-s001/scenario2",
+      "question_text_sha256": "b405fdd23f99c7536de9cf8b06bddbe16d6f5d912978a8e10433d52fb72bd864"
+    },
+    {
+      "sample_index": 33,
+      "question_id": "mep_2374-8265.11327-s001__scenario3",
+      "source_scenario_path": "mep_2374-8265.11327-s001/scenario3",
+      "question_text_sha256": "f92edc9839b7615ab98a1ac43cdf532d8225b304b624ab81dfee0787b71f5451"
+    },
+    {
+      "sample_index": 34,
+      "question_id": "mep_2374-8265.11237-s001__scenario2",
+      "source_scenario_path": "mep_2374-8265.11237-s001/scenario2",
+      "question_text_sha256": "a88eb7892f857de21e3c11b5edef75740e8e5a5d0ac2f0d0528be56992a0d986"
+    },
+    {
+      "sample_index": 35,
+      "question_id": "mep_2374-8265.10957-s001__scenario4",
+      "source_scenario_path": "mep_2374-8265.10957-s001/scenario4",
+      "question_text_sha256": "b63a5dc4307a0c2532893b767269f92b7b139eb765c8fa2f8b2ec8d0ae3afb14"
+    },
+    {
+      "sample_index": 36,
+      "question_id": "mep_2374-8265.11328-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11328-s001/scenario1",
+      "question_text_sha256": "16ae66c67671e382ddd252a7ac975858ef421c54dfacf71049966d79bc158ba8"
+    },
+    {
+      "sample_index": 37,
+      "question_id": "mep-12-10490-s001__scenario1",
+      "source_scenario_path": "mep-12-10490-s001/scenario1",
+      "question_text_sha256": "f12feb008d692c6d5ee69806d24a3d49bde9b50b4cd391908ff8cf3cffcfcffa"
+    },
+    {
+      "sample_index": 38,
+      "question_id": "mededportal_9903__scenario8",
+      "source_scenario_path": "mededportal_9903/scenario8",
+      "question_text_sha256": "5b77ab0daa21547347cfd17a8895a3adc6a379ed5b4d20f8cc3fb289c07c17dc"
+    },
+    {
+      "sample_index": 39,
+      "question_id": "mep_2374-8265.10957-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.10957-s001/scenario1",
+      "question_text_sha256": "d1358f5b28d72c3e55d84284dd42dc44bb6743ba1c0e38d9cd8e95ec0c0edb1b"
+    },
+    {
+      "sample_index": 40,
+      "question_id": "mep_2374-8265.11120-s001__scenario8",
+      "source_scenario_path": "mep_2374-8265.11120-s001/scenario8",
+      "question_text_sha256": "852e11a44f61f864a29348044db4572efbaa556ba4c90d56dd5b9008ec221a65"
+    },
+    {
+      "sample_index": 41,
+      "question_id": "mep_2374-8265.11047-s001__scenario3",
+      "source_scenario_path": "mep_2374-8265.11047-s001/scenario3",
+      "question_text_sha256": "4200c82681dcf9ab706d865d62b81f5cbf39b76bd5ae8713d96fa72bd2207710"
+    },
+    {
+      "sample_index": 42,
+      "question_id": "mep-13-10640-s001__scenario2",
+      "source_scenario_path": "mep-13-10640-s001/scenario2",
+      "question_text_sha256": "7c5e1de406b136d49faaa47533fda93d992ba7639ceea71140a7cd9f16d3d630"
+    },
+    {
+      "sample_index": 43,
+      "question_id": "mededportal_9717__scenario1",
+      "source_scenario_path": "mededportal_9717/scenario1",
+      "question_text_sha256": "147fec387a31db49a10c76f41dea7268447633027630c4ce09d941a4210e3e5d"
+    },
+    {
+      "sample_index": 44,
+      "question_id": "mededportal_10205__scenario3",
+      "source_scenario_path": "mededportal_10205/scenario3",
+      "question_text_sha256": "4ab0f895dc57a874aa508d3e5fc9ef167be4fe11e73295329ad15ed7eb40dc0f"
+    },
+    {
+      "sample_index": 45,
+      "question_id": "mep-12-10488-s001__scenario1",
+      "source_scenario_path": "mep-12-10488-s001/scenario1",
+      "question_text_sha256": "f957065f407dae63a8743643639ad4dbdf6688c8f407402f2db30e83c15d25bf"
+    },
+    {
+      "sample_index": 46,
+      "question_id": "mep-14-10773-s001__scenario2",
+      "source_scenario_path": "mep-14-10773-s001/scenario2",
+      "question_text_sha256": "5436e195371aa9cc572908aae6a438e523da2a6ffb905535c1d992be9a208b3f"
+    },
+    {
+      "sample_index": 47,
+      "question_id": "mep_2374-8265.11104-s001__scenario18",
+      "source_scenario_path": "mep_2374-8265.11104-s001/scenario18",
+      "question_text_sha256": "0bfc69a998aaa0d4fe1c0ce0362e162bcc0e9f62a4decbe75305287061105b40"
+    },
+    {
+      "sample_index": 48,
+      "question_id": "mep_2374-8265.11234-s001__scenario3",
+      "source_scenario_path": "mep_2374-8265.11234-s001/scenario3",
+      "question_text_sha256": "6dcfc28f53b390e0c9f0e7dbcc35fccb834e43aeafbc9617353216994df7640e"
+    },
+    {
+      "sample_index": 49,
+      "question_id": "mep_2374-8265.11104-s001_1__scenario17",
+      "source_scenario_path": "mep_2374-8265.11104-s001_1/scenario17",
+      "question_text_sha256": "37438185caa3078b03b895b0b7833c219616433d79e592ec85a5d82ff247e77c"
+    },
+    {
+      "sample_index": 50,
+      "question_id": "mededportal_9539__scenario1",
+      "source_scenario_path": "mededportal_9539/scenario1",
+      "question_text_sha256": "c8341e67d3360e139917056fbd5cdd2183c5663b44ee39d78e2fb19ab7823c8c"
+    },
+    {
+      "sample_index": 51,
+      "question_id": "mededportal_145__scenario1",
+      "source_scenario_path": "mededportal_145/scenario1",
+      "question_text_sha256": "9055de940f601d07c6d536d21f7193fa63f3597d845e456fd2220005982d5ba8"
+    },
+    {
+      "sample_index": 52,
+      "question_id": "mededportal_10312__scenario1",
+      "source_scenario_path": "mededportal_10312/scenario1",
+      "question_text_sha256": "85b09938fcdaff0f582a327bcddb1e13d91c1f8b6d95dc174ac90b52fea9cb7b"
+    },
+    {
+      "sample_index": 53,
+      "question_id": "mededportal_9903__scenario1",
+      "source_scenario_path": "mededportal_9903/scenario1",
+      "question_text_sha256": "e908a32b511ec98db89f496efd45b3235ebeb722ad1317f06e009bfb168ed234"
+    },
+    {
+      "sample_index": 54,
+      "question_id": "mep_2374-8265.11368-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11368-s001/scenario1",
+      "question_text_sha256": "e81fcdc56e0f7a7a71608a6f3f3c6b7a29caa1cdff48dc08b4636cd4c0f196e2"
+    },
+    {
+      "sample_index": 55,
+      "question_id": "mep_2374-8265.11104-s001_1__scenario10",
+      "source_scenario_path": "mep_2374-8265.11104-s001_1/scenario10",
+      "question_text_sha256": "11f3c8adf6bd8629d0f6f83e8586429d9496e12f42aec01cc23555c0900899fb"
+    },
+    {
+      "sample_index": 56,
+      "question_id": "mep_2374-8265.10936-s001__scenario6",
+      "source_scenario_path": "mep_2374-8265.10936-s001/scenario6",
+      "question_text_sha256": "22f5448d1b4cbf5ca925102a310f537be08e4b9e90a70f896e96166116b81303"
+    },
+    {
+      "sample_index": 57,
+      "question_id": "mededportal_5102__scenario1",
+      "source_scenario_path": "mededportal_5102/scenario1",
+      "question_text_sha256": "50efaace07292508317fe0b308ed54d343a29dcb962e36bfab87c5c400e104e3"
+    },
+    {
+      "sample_index": 58,
+      "question_id": "mededportal_10390__scenario1",
+      "source_scenario_path": "mededportal_10390/scenario1",
+      "question_text_sha256": "9c2dda370fa72d84cc8b234818c2e76c554ffdd901e1dfda826230305cbfb150"
+    },
+    {
+      "sample_index": 59,
+      "question_id": "mep_2374-8265.11518-s001__scenario2",
+      "source_scenario_path": "mep_2374-8265.11518-s001/scenario2",
+      "question_text_sha256": "1394eda68b46c354ea57d49aa969746d2506df4cc43d5de314109b4bf9cfdcde"
+    },
+    {
+      "sample_index": 60,
+      "question_id": "mep_2374-8265.11410-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11410-s001/scenario1",
+      "question_text_sha256": "e185c9a0372694a3de5d1b4c86c7e5ff71caf542fc7c973e18c57bdf2dc5287d"
+    },
+    {
+      "sample_index": 61,
+      "question_id": "mededportal_9907__scenario4",
+      "source_scenario_path": "mededportal_9907/scenario4",
+      "question_text_sha256": "8ac936180f26001f24eeef6cff5a41f16039341f433e5197c20540135ee75b33"
+    },
+    {
+      "sample_index": 62,
+      "question_id": "mededportal_9917__scenario1",
+      "source_scenario_path": "mededportal_9917/scenario1",
+      "question_text_sha256": "e8183befffbbc7673505a5ff3ca10b7b19aab4ebb40085db65422dda5a762429"
+    },
+    {
+      "sample_index": 63,
+      "question_id": "mededportal_10312__scenario2",
+      "source_scenario_path": "mededportal_10312/scenario2",
+      "question_text_sha256": "356bbcf8aceb5b904efa3cdc1080e5a615b170182adf3af8f4ed268b6011a339"
+    },
+    {
+      "sample_index": 64,
+      "question_id": "mep-12-10444-s001__scenario2",
+      "source_scenario_path": "mep-12-10444-s001/scenario2",
+      "question_text_sha256": "b4c3db1a515ff9dea305069d6d12d2e0d21f045167be93cb52decf384c7e9126"
+    },
+    {
+      "sample_index": 65,
+      "question_id": "mep_2374-8265.11118-s001__scenario2",
+      "source_scenario_path": "mep_2374-8265.11118-s001/scenario2",
+      "question_text_sha256": "f416118127ce3ce7dc131f56637c5f834c7484cf715a9d3acd9774f4f3aa9bc3"
+    },
+    {
+      "sample_index": 66,
+      "question_id": "mededportal_10166__scenario3",
+      "source_scenario_path": "mededportal_10166/scenario3",
+      "question_text_sha256": "01216a4e1ced38cf4d81edda71d3b4cd5b55eaaa9f41680b6eb006c4675c8017"
+    },
+    {
+      "sample_index": 67,
+      "question_id": "mededportal_9804__scenario1",
+      "source_scenario_path": "mededportal_9804/scenario1",
+      "question_text_sha256": "8040cad128407ac5babbe2905e9e399b6c15ef1c967b4ee826519be3d5c4f8d8"
+    },
+    {
+      "sample_index": 68,
+      "question_id": "mep_2374-8265.10957-s001__scenario8",
+      "source_scenario_path": "mep_2374-8265.10957-s001/scenario8",
+      "question_text_sha256": "379beb74092acac0d78b89c1ad7a34f6c94316274608fa6ca1b02e621e12e2bd"
+    },
+    {
+      "sample_index": 69,
+      "question_id": "mep-12-10505-s001__scenario1",
+      "source_scenario_path": "mep-12-10505-s001/scenario1",
+      "question_text_sha256": "11138ec9e013766229e04ccc34f390702dae5d538477d85c8bf497a99b99cacb"
+    },
+    {
+      "sample_index": 70,
+      "question_id": "mep_2374-8265.11500-s001__scenario2",
+      "source_scenario_path": "mep_2374-8265.11500-s001/scenario2",
+      "question_text_sha256": "610a5f0ddf603865abdac53878408af030cd9966dea421664ce4cf79f6e241bf"
+    },
+    {
+      "sample_index": 71,
+      "question_id": "mep-13-10553-s001__scenario1",
+      "source_scenario_path": "mep-13-10553-s001/scenario1",
+      "question_text_sha256": "96343f0ec278fea610fa3293183469f71d3812665b75125ce96e9056676a8f82"
+    },
+    {
+      "sample_index": 72,
+      "question_id": "mededportal_9400__scenario1",
+      "source_scenario_path": "mededportal_9400/scenario1",
+      "question_text_sha256": "e4002d69189eb6426a3195c8fb011d249464ad3c3199857161e053c596b57cdb"
+    },
+    {
+      "sample_index": 73,
+      "question_id": "mededportal_8139__scenario3",
+      "source_scenario_path": "mededportal_8139/scenario3",
+      "question_text_sha256": "5fc330dd7a191ef1c089e6bfc6edcc3bb8f515c0b097e736e3714b2525ef62fc"
+    },
+    {
+      "sample_index": 74,
+      "question_id": "mep_2374-8265.10957-s001__scenario6",
+      "source_scenario_path": "mep_2374-8265.10957-s001/scenario6",
+      "question_text_sha256": "680ca9f7e69a064b10a8aec2570efc2aeed5110c370f37148dc7d67fd728e6f9"
+    },
+    {
+      "sample_index": 75,
+      "question_id": "mep_2374-8265.11163-s001__scenario4",
+      "source_scenario_path": "mep_2374-8265.11163-s001/scenario4",
+      "question_text_sha256": "ad07dcd68f859bdbeb01972a82ac4599f7144ee63141063ca5e7baf4826a4768"
+    },
+    {
+      "sample_index": 76,
+      "question_id": "mededportal_9856__scenario2",
+      "source_scenario_path": "mededportal_9856/scenario2",
+      "question_text_sha256": "c7b6cf0b878b2f18e0fab2b1c5b41ad61788d53a7df712113f54187d7cf23bae"
+    },
+    {
+      "sample_index": 77,
+      "question_id": "mededportal_10256__scenario2",
+      "source_scenario_path": "mededportal_10256/scenario2",
+      "question_text_sha256": "45f3626b7cc12731b60c810f4e4df3a99fd897edd9625f85757c55a00761e511"
+    },
+    {
+      "sample_index": 78,
+      "question_id": "mededportal_1075__scenario4",
+      "source_scenario_path": "mededportal_1075/scenario4",
+      "question_text_sha256": "6492d05993c9fe26f4b8ec99fc9bf4be9b0983042575eca470ffe4b41d43e447"
+    },
+    {
+      "sample_index": 79,
+      "question_id": "mededportal_9218__scenario2",
+      "source_scenario_path": "mededportal_9218/scenario2",
+      "question_text_sha256": "9652f060ab521bc979c7fa54637ed522ec69ab3712d0c9923329ffcc3a5eeaec"
+    },
+    {
+      "sample_index": 80,
+      "question_id": "mep-15-10811-s001__scenario1",
+      "source_scenario_path": "mep-15-10811-s001/scenario1",
+      "question_text_sha256": "29d69fc8ab8956c00afb0067e7245c3d2c760b3bd6fed052b41d450932180759"
+    },
+    {
+      "sample_index": 81,
+      "question_id": "mep_2374-8265.11104-s001_1__scenario14",
+      "source_scenario_path": "mep_2374-8265.11104-s001_1/scenario14",
+      "question_text_sha256": "e28b512a2e487130c74bb701ca9ddedb26bb54a84752906d84323f8e180f5453"
+    },
+    {
+      "sample_index": 82,
+      "question_id": "mep_2374-8265.11382-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11382-s001/scenario1",
+      "question_text_sha256": "297b4af8bd0432fd819b8d9169b1fdfdeef74e7ca7408d1e4bcd86623f2205e3"
+    },
+    {
+      "sample_index": 83,
+      "question_id": "mep-15-10826-s001__scenario1",
+      "source_scenario_path": "mep-15-10826-s001/scenario1",
+      "question_text_sha256": "c165ca5448c081c37cf8c348acc3ad924ef63dd1f1e8f64dcb454703d029e1c3"
+    },
+    {
+      "sample_index": 84,
+      "question_id": "mededportal_1075__scenario2",
+      "source_scenario_path": "mededportal_1075/scenario2",
+      "question_text_sha256": "c5dad64b988071fb4bc3395552a2219695f237625a7a2b586b363f51edd314f0"
+    },
+    {
+      "sample_index": 85,
+      "question_id": "mep_2374-8265.11264-s001__scenario4",
+      "source_scenario_path": "mep_2374-8265.11264-s001/scenario4",
+      "question_text_sha256": "5cf33f704f45a1b08850e76243fac01ada632523a18eda71cfc5688bbb826bf5"
+    },
+    {
+      "sample_index": 86,
+      "question_id": "mep_2374-8265.11163-s001__scenario3",
+      "source_scenario_path": "mep_2374-8265.11163-s001/scenario3",
+      "question_text_sha256": "198f6d532dea55fac2a4aafc21dccf23902c67459fbb78980a5a9ded6b8b86bd"
+    },
+    {
+      "sample_index": 87,
+      "question_id": "mededportal_9903__scenario9",
+      "source_scenario_path": "mededportal_9903/scenario9",
+      "question_text_sha256": "1afe171e077411caff0f1b1e5aac7c111239118aaa79858b931fca6fa18e7ee1"
+    },
+    {
+      "sample_index": 88,
+      "question_id": "mep_2374-8265.11355-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11355-s001/scenario1",
+      "question_text_sha256": "bdc76cadbf86eee37bb2829d4995163e79ae23e89b32076828f616884c6a6f95"
+    },
+    {
+      "sample_index": 89,
+      "question_id": "mep_2374-8265.10873-s001__scenario3",
+      "source_scenario_path": "mep_2374-8265.10873-s001/scenario3",
+      "question_text_sha256": "14a119991ca28cd73f7489858624d78c3ed210da92409d096b57a801d9e9930c"
+    },
+    {
+      "sample_index": 90,
+      "question_id": "mededportal_9383__scenario1",
+      "source_scenario_path": "mededportal_9383/scenario1",
+      "question_text_sha256": "d19e75984375282343f706248e0a32bc6c4e0bee8b149c46c3cca1af9e80d0b9"
+    },
+    {
+      "sample_index": 91,
+      "question_id": "mededportal_9089__scenario3",
+      "source_scenario_path": "mededportal_9089/scenario3",
+      "question_text_sha256": "b63f34e93a7691334d46e95fac52c1487af5cd49e7a77f6cc6e5e7086196176c"
+    },
+    {
+      "sample_index": 92,
+      "question_id": "mep_2374-8265.11104-s001__scenario14",
+      "source_scenario_path": "mep_2374-8265.11104-s001/scenario14",
+      "question_text_sha256": "4795ce64340b79fcbb30225cb3ef6302675916b873800d0862001a6eb36099ef"
+    },
+    {
+      "sample_index": 93,
+      "question_id": "mep_2374-8265.11568-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11568-s001/scenario1",
+      "question_text_sha256": "ec0e05be584c7454986e412637cf9852afea4080010891fecc43f689cb943539"
+    },
+    {
+      "sample_index": 94,
+      "question_id": "mededportal_10257__scenario1",
+      "source_scenario_path": "mededportal_10257/scenario1",
+      "question_text_sha256": "41c25411fe5bb982ccaae54fefc9cd5724e95450e6867c55d68309d41c56e661"
+    },
+    {
+      "sample_index": 95,
+      "question_id": "mep_2374-8265.10957-s001__scenario5",
+      "source_scenario_path": "mep_2374-8265.10957-s001/scenario5",
+      "question_text_sha256": "9ee6643a11444efcf7e85f12b91cf2dfeade7385c45e286dc28bd9fb9dec231f"
+    },
+    {
+      "sample_index": 96,
+      "question_id": "mep-12-10505-s001__scenario2",
+      "source_scenario_path": "mep-12-10505-s001/scenario2",
+      "question_text_sha256": "bd1fbe8a9b21497ae7f1ed0b6b2652aa213c071b8445608ec3c9fb8417f3aa9d"
+    },
+    {
+      "sample_index": 97,
+      "question_id": "mep-12-10518-s001__scenario2",
+      "source_scenario_path": "mep-12-10518-s001/scenario2",
+      "question_text_sha256": "c682ac5155478c139f08ecf538fd4a03b0859bd333cebb6b97849712148869d6"
+    },
+    {
+      "sample_index": 98,
+      "question_id": "mep_2374-8265.11348-s001__scenario2",
+      "source_scenario_path": "mep_2374-8265.11348-s001/scenario2",
+      "question_text_sha256": "bf2df13b5d4c291a98733d29f5891c694c87e7d4ba5082f36628dc360e2ea797"
+    },
+    {
+      "sample_index": 99,
+      "question_id": "mep_2374-8265.11111-s001__scenario1",
+      "source_scenario_path": "mep_2374-8265.11111-s001/scenario1",
+      "question_text_sha256": "8eb092ae0c5f111edf69277d74c539bc42e381eb7e253a96b1c4797f51fd14b2"
+    }
+  ]
+}

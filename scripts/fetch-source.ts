@@ -2,11 +2,14 @@
 // materialise the Git LFS files the app needs, verifying each against the
 // sha256 recorded in its LFS pointer. Does not require git-lfs.
 //
-//   npm run data:fetch            # files needed for Real-POCQi
-//   npm run data:fetch -- --all   # every LFS judgment file (incl. MedSP1000)
+//   npm run data:fetch            # files needed for Real-POCQi and MedSP1000 (8 turns)
+//   npm run data:fetch -- --all   # every LFS judgment file
+//
+// Downloaded LFS objects are kept in .source/lfs-cache/<sha256> so switching the
+// pinned commit never re-downloads a file whose content did not change.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createReadStream, createWriteStream, existsSync, readFileSync, renameSync } from "node:fs";
+import { copyFileSync, createReadStream, createWriteStream, existsSync, mkdirSync, renameSync } from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -14,13 +17,16 @@ import { pipeline } from "node:stream/promises";
 import { SOURCE_COMMIT, SOURCE_REPO } from "../src/lib/prep/source";
 
 const DEST = path.resolve(".source/Medical-LLM-Self-Preference");
+const CACHE = path.resolve(".source/lfs-cache");
 
-const REQUIRED_LFS = ["data/real_pcoqi/judgements/rubric_and_model_ranking.jsonl"];
+const REQUIRED_LFS = [
+  "data/real_pcoqi/judgements/rubric_and_model_ranking.jsonl",
+  "data/outputs/medsp1000/judgements/rubric_and_model_ranking.jsonl",
+];
 const OPTIONAL_LFS = [
   "data/real_pcoqi/judgements/direct_ranking.jsonl",
   "data/real_pcoqi/judgements/identity_revealed_rubric_and_model_ranking.jsonl",
   "data/real_pcoqi/judgements/score_only.jsonl",
-  "data/outputs/medsp1000/judgements/rubric_and_model_ranking.jsonl",
   "data/outputs/medsp1000/judgements/rubric_and_model_ranking_2_turns.jsonl",
   "data/outputs/medsp1000/judgements/rubric_and_model_ranking_4_turns.jsonl",
   "data/outputs/medsp1000/judgements/rubric_and_model_ranking_6_turns.jsonl",
@@ -49,8 +55,15 @@ async function main() {
     console.log(`Cloning ${SOURCE_REPO} into ${DEST}`);
     git(["clone", "--quiet", "--no-checkout", `https://github.com/${SOURCE_REPO}.git`, DEST], undefined);
   }
+  try {
+    git(["cat-file", "-e", `${SOURCE_COMMIT}^{commit}`], DEST);
+  } catch {
+    console.log(`Fetching ${SOURCE_COMMIT}`);
+    git(["fetch", "--quiet", "origin"], DEST);
+  }
   // Never let a local git-lfs smudge filter interfere; we fetch LFS objects ourselves.
-  execFileSync("git", ["-c", "filter.lfs.smudge=", "-c", "filter.lfs.process=", "-c", "filter.lfs.required=false", "checkout", "--quiet", SOURCE_COMMIT], {
+  // --force discards materialised LFS files in the work tree; they are restored from the cache below.
+  execFileSync("git", ["-c", "filter.lfs.smudge=", "-c", "filter.lfs.process=", "-c", "filter.lfs.required=false", "checkout", "--quiet", "--force", SOURCE_COMMIT], {
     cwd: DEST,
     stdio: "inherit",
   });
@@ -63,7 +76,9 @@ async function main() {
     const pointer = parsePointer(pointerText);
     if (!pointer) throw new Error(`${rel} is not an LFS pointer at ${SOURCE_COMMIT}`);
     const target = path.join(DEST, rel);
-    if (existsSync(target) && !parsePointer(readFileSync(target, "utf8").slice(0, 200)) && (await fileSha256(target)) === pointer.oid) {
+    const cached = path.join(CACHE, pointer.oid);
+    if (existsSync(cached) && (await fileSha256(cached)) === pointer.oid) {
+      copyFileSync(cached, target);
       console.log(`  ok (cached) ${rel}`);
       continue;
     }
@@ -71,11 +86,13 @@ async function main() {
     console.log(`  downloading ${rel} (${(pointer.size / 1e6).toFixed(1)} MB)`);
     const res = await fetch(url);
     if (!res.ok || !res.body) throw new Error(`download failed for ${rel}: HTTP ${res.status}`);
-    const tmp = `${target}.download`;
+    mkdirSync(CACHE, { recursive: true });
+    const tmp = `${cached}.download`;
     await pipeline(Readable.fromWeb(res.body as never), createWriteStream(tmp));
     const got = await fileSha256(tmp);
     if (got !== pointer.oid) throw new Error(`sha256 mismatch for ${rel}: got ${got}, expected ${pointer.oid}`);
-    renameSync(tmp, target);
+    renameSync(tmp, cached);
+    copyFileSync(cached, target);
     console.log(`  ok ${rel} sha256=${got}`);
   }
 }

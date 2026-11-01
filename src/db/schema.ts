@@ -22,6 +22,8 @@ const ts = (name: string) => timestamp(name, { withTimezone: true, mode: "date" 
 /** One unit physicians evaluate: a Real-POCQi question or (later) a MedSP1000 scenario at k turns. */
 export const items = pgTable("items", {
   itemId: text("item_id").primaryKey(),
+  /** Which study the item belongs to; studies are graded separately. */
+  study: text("study", { enum: ["real_pocqi", "medsp1000"] }).notNull().default("real_pocqi"),
   /** Original question / scenario ID from the research repository. */
   sourceQuestionId: text("source_question_id").notNull(),
   sourceDataset: text("source_dataset").notNull(),
@@ -117,8 +119,11 @@ export const users = pgTable("users", {
   /** Determines the reviewer's Williams-square row offset for presentation order. */
   reviewerSlot: integer("reviewer_slot").notNull(),
   active: boolean("active").notNull().default(true),
-  instructionsAcknowledgedAt: ts("instructions_acknowledged_at"),
-  submittedAt: ts("submitted_at"),
+  /** Physician background, recorded by the study team for analysis covariates. */
+  specialty: text("specialty"),
+  yearsInPractice: integer("years_in_practice"),
+  /** Per-study instruction acknowledgement: { [study]: ISO timestamp }. */
+  instructionsAck: jsonb("instructions_ack").$type<Record<string, string>>().notNull().default(sql`'{}'::jsonb`),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
@@ -151,7 +156,8 @@ export const assignments = pgTable(
     itemId: text("item_id")
       .notNull()
       .references(() => items.itemId),
-    /** 0-based position in the reviewer's queue. */
+    study: text("study", { enum: ["real_pocqi", "medsp1000"] }).notNull().default("real_pocqi"),
+    /** 0-based position in the reviewer's queue for this study. */
     queuePosition: integer("queue_position").notNull(),
     /** Response IDs in display order; index 0 is shown as "Response A". */
     presentationOrder: jsonb("presentation_order").$type<string[]>().notNull(),
@@ -164,6 +170,15 @@ export const assignments = pgTable(
     instrumentConfig: jsonb("instrument_config"),
     activeMs: integer("active_ms").notNull().default(0),
     revision: integer("revision").notNull().default(0),
+    /** Set when the assignment was created by a study plan. */
+    planId: text("plan_id").references(() => studyPlans.planId),
+    /** 1-based plan position (P1..PN) the assignment belongs to. */
+    planSlot: integer("plan_slot"),
+    /** 1-based block number; null for calibration cases and manual assignments. */
+    planBlock: integer("plan_block"),
+    isCalibration: boolean("is_calibration").notNull().default(false),
+    /** Set when this (unfinished) assignment was handed to a replacement physician. */
+    transferredAt: ts("transferred_at"),
     assignedAt: ts("assigned_at").notNull().defaultNow(),
     startedAt: ts("started_at"),
     completedAt: ts("completed_at"),
@@ -172,9 +187,33 @@ export const assignments = pgTable(
   },
   (t) => [
     uniqueIndex("assignments_reviewer_item_uq").on(t.reviewerId, t.itemId),
-    uniqueIndex("assignments_reviewer_position_uq").on(t.reviewerId, t.queuePosition),
+    uniqueIndex("assignments_reviewer_study_position_uq").on(t.reviewerId, t.study, t.queuePosition),
   ],
 );
+
+/** One applied assignment plan per study (see src/lib/plan.ts). */
+export const studyPlans = pgTable("study_plans", {
+  planId: text("plan_id").primaryKey(),
+  study: text("study", { enum: ["real_pocqi", "medsp1000"] }).notNull().unique(),
+  seed: text("seed").notNull(),
+  physicianCount: integer("physician_count").notNull(),
+  calibrationCount: integer("calibration_count").notNull(),
+  gradersPerCase: integer("graders_per_case").notNull(),
+  blockSize: integer("block_size").notNull(),
+  /** The full generated plan: calibration items, blocks, slots and queues. */
+  design: jsonb("design").notNull(),
+  /** Slot hand-overs: [{ slot, fromReviewerId, toReviewerId, at, moved }]. */
+  transfers: jsonb("transfers").$type<SlotTransfer[]>().notNull().default(sql`'[]'::jsonb`),
+  appliedAt: ts("applied_at").notNull().defaultNow(),
+});
+
+export interface SlotTransfer {
+  slot: number;
+  fromReviewerId: string;
+  toReviewerId: string;
+  at: string;
+  moved: number;
+}
 
 /** One row per (assignment, response): rank, rubric scores and error annotation. */
 export const responseEvaluations = pgTable(

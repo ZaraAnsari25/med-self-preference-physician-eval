@@ -73,6 +73,7 @@ function main() {
 
   const meta = {
     bundle_version: "1",
+    study: "real_pocqi",
     study_seed: seed,
     sample_size: size,
     sampling: "stratified by specialty; proportional allocation (largest remainder, min 1); hashSort within stratum; hashSort overall order",
@@ -94,7 +95,7 @@ function main() {
   writeFileSync("data/prepared/study-bundle.json", JSON.stringify({ meta, items }, null, 1) + "\n");
 
   const allocation: Record<string, number> = {};
-  for (const it of items) allocation[it.specialty] = (allocation[it.specialty] ?? 0) + 1;
+  for (const it of items) allocation[it.specialty!] = (allocation[it.specialty!] ?? 0) + 1;
   const manifest = {
     ...meta,
     allocation_by_specialty: Object.fromEntries(Object.entries(allocation).sort()),

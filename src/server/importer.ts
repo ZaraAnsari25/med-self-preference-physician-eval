@@ -2,7 +2,8 @@ import { inArray } from "drizzle-orm";
 import type { DB } from "@/db";
 import { items, llmJudgments, responseProvenance, responses } from "@/db/schema";
 import { sha256Hex } from "@/lib/hash";
-import type { BundleItem } from "@/lib/prep/realPocqi";
+import type { BundleItem } from "@/lib/prep/bundle";
+import type { StudyId } from "@/lib/studies";
 import { setStudySeed } from "./settings";
 
 export interface StudyBundle {
@@ -29,7 +30,11 @@ export async function importBundle(db: DB, bundle: StudyBundle, opts: { limit?: 
       }
     }
   }
-  await setStudySeed(db, bundle.meta.study_seed);
+  // Bundles written before studies existed carry no study tag: they are Real-POCQi.
+  const studyOf = (it: BundleItem): StudyId => it.study ?? "real_pocqi";
+  const studies = new Set(bundle.items.map(studyOf));
+  if (studies.size !== 1) throw new Error("a bundle must contain items from exactly one study");
+  await setStudySeed(db, [...studies][0], bundle.meta.study_seed);
 
   const ids = selected.map((i) => i.item_id);
   const existing = ids.length ? await db.select().from(items).where(inArray(items.itemId, ids)) : [];
@@ -59,13 +64,14 @@ export async function importBundle(db: DB, bundle: StudyBundle, opts: { limit?: 
       }
       await tx.insert(items).values({
         itemId: it.item_id,
+        study: studyOf(it),
         sourceQuestionId: it.source_question_id,
         sourceDataset: it.source_dataset,
         itemType: it.item_type,
         specialty: it.specialty,
         questionText: it.question_text,
         context: null,
-        turnCount: null,
+        turnCount: it.turn_count ?? null,
         sampleIndex: it.sample_index,
         provenance: it.provenance,
       });
@@ -73,9 +79,9 @@ export async function importBundle(db: DB, bundle: StudyBundle, opts: { limit?: 
         it.responses.map((r) => ({
           responseId: r.response_id,
           itemId: it.item_id,
-          contentFormat: "markdown" as const,
+          contentFormat: r.transcript ? ("transcript" as const) : ("markdown" as const),
           responseText: r.response_text,
-          transcript: null,
+          transcript: r.transcript ?? null,
         })),
       );
       await tx.insert(responseProvenance).values(

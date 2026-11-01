@@ -3,8 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { completionProblems, type EvaluationState, type ResponseEvaluation } from "@/lib/evaluation";
+import { STUDIES } from "@/lib/studies";
 import type { PhysicianItemPayload, QueueEntry } from "@/server/evaluations";
 import { InstructionsDialog } from "./InstructionsDialog";
+import { Markdown } from "./Markdown";
 import { LogoutButton } from "./LogoutButton";
 import { QuestionNav } from "./QuestionNav";
 import { RankingPanel } from "./RankingPanel";
@@ -19,6 +21,8 @@ interface Props {
   queue: QueueEntry[];
   reviewerCode: string;
   displayName: string | null;
+  /** Show a link back to the study picker when the reviewer has more than one study. */
+  hasOtherStudies: boolean;
 }
 
 function previewOf(text: string) {
@@ -29,9 +33,10 @@ function previewOf(text: string) {
     .slice(0, 90);
 }
 
-export function Workspace({ payload, queue: initialQueue, reviewerCode, displayName }: Props) {
+export function Workspace({ payload, queue: initialQueue, reviewerCode, displayName, hasOtherStudies }: Props) {
   const router = useRouter();
-  const { position, total, item, responses, config, locked } = payload;
+  const { study, position, total, item, responses, config, locked } = payload;
+  const def = STUDIES[study];
   const labels = useMemo(() => responses.map((r) => r.label), [responses]);
   const previews = useMemo(
     () => Object.fromEntries(responses.map((r) => [r.label, previewOf(r.transcript?.map((t) => t.content).join(" ") ?? r.text)])),
@@ -80,7 +85,7 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
   const doSave = useCallback(async (): Promise<boolean> => {
     const activeMsDelta = takeActiveMs();
     try {
-      const res = await fetch(`/api/evaluations/${position}`, {
+      const res = await fetch(`/api/studies/${study}/evaluations/${position}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ state: stateRef.current, baseRevision: revisionRef.current, activeMsDelta }),
@@ -96,7 +101,7 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
       setSaveError(err instanceof Error ? err.message : "Save failed");
       return false;
     }
-  }, [position]);
+  }, [study, position]);
 
   const flush = useCallback(async (): Promise<boolean> => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -149,11 +154,11 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
 
   const navigate = async (href: string) => {
     const ok = locked ? true : await flush();
-    if (!ok && !window.confirm("Your latest changes could not be saved. Leave this question anyway?")) return;
+    if (!ok && !window.confirm(`Your latest changes could not be saved. Leave this ${def.unitNoun} anyway?`)) return;
     router.push(href);
     router.refresh();
   };
-  const goTo = (p: number) => navigate(`/evaluate/${p}`);
+  const goTo = (p: number) => navigate(`/study/${study}/q/${p}`);
 
   const setResponse = (label: string, next: ResponseEvaluation) =>
     update((s) => ({ ...s, responses: { ...s.responses, [label]: next } }));
@@ -177,6 +182,12 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
           <div className="flex items-center gap-2.5">
             <Logo />
             <span className="font-semibold">Medical LLM Physician Evaluation</span>
+            <Pill tone="accent">{def.name}</Pill>
+            {hasOtherStudies && (
+              <button type="button" onClick={() => navigate("/studies")} className="text-sm text-muted underline underline-offset-2 hover:text-ink">
+                All studies
+              </button>
+            )}
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <span className="text-muted">
@@ -185,12 +196,12 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
             <SaveIndicator status={locked ? "locked" : saveStatus} onRetry={() => void flush()} />
             <div className="flex items-center gap-2.5">
               <span className="whitespace-nowrap text-ink-2">
-                {completed} of {total} questions completed
+                {completed} of {total} {def.unitNoun}s completed
               </span>
               <div
                 className="h-2 w-32 overflow-hidden rounded-full bg-line"
                 role="progressbar"
-                aria-label="Questions completed"
+                aria-label={`${def.unitNoun}s completed`}
                 aria-valuemin={0}
                 aria-valuemax={total}
                 aria-valuenow={completed}
@@ -200,10 +211,10 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
             </div>
             <Button onClick={() => setInstructionsOpen(true)}>Instructions</Button>
             <div className="flex gap-1.5">
-              <Button aria-label="Previous question" disabled={position === 1} onClick={() => goTo(position - 1)}>
+              <Button aria-label={`Previous ${def.unitNoun}`} disabled={position === 1} onClick={() => goTo(position - 1)}>
                 ←
               </Button>
-              <Button aria-label="Next question" disabled={isLast} onClick={() => goTo(position + 1)}>
+              <Button aria-label={`Next ${def.unitNoun}`} disabled={isLast} onClick={() => goTo(position + 1)}>
                 →
               </Button>
             </div>
@@ -225,7 +236,7 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
       </header>
 
       <main className="mx-auto max-w-[1600px] px-6 py-5">
-        <QuestionNav queue={queue} current={position} onSelect={goTo} onSubmit={() => navigate("/submit")} />
+        <QuestionNav unitNoun={def.unitNoun} queue={queue} current={position} onSelect={goTo} onSubmit={() => navigate(`/study/${study}/submit`)} />
 
         {locked && (
           <div className="mt-4 rounded-xl border border-done-line bg-done-soft px-4 py-3 text-sm text-done">
@@ -237,7 +248,10 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
           <div className="min-w-0 space-y-5">
             <Card>
               <div className="flex flex-wrap items-center gap-2 border-b border-line px-5 py-3.5">
-                <span className="text-lg font-bold">Q{position}</span>
+                <span className="text-lg font-bold">
+                  {def.unitNoun === "scenario" ? "S" : "Q"}
+                  {position}
+                </span>
                 <Pill>
                   {position} of {total}
                 </Pill>
@@ -248,16 +262,25 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
                 </span>
               </div>
               <div className="p-5">
-                <SectionLabel className="mb-2">{item.itemType === "multi_turn" ? "Case information" : "Clinical question"}</SectionLabel>
-                <div className="whitespace-pre-wrap rounded-lg border border-question-line bg-question px-5 py-4 text-[1.02rem] leading-relaxed">
-                  {item.questionText}
+                <SectionLabel className="mb-2">{def.promptLabel}</SectionLabel>
+                <div
+                  className={cx(
+                    "rounded-lg border border-question-line bg-question px-5 py-4 text-[1.02rem] leading-relaxed",
+                    item.itemType === "multi_turn" ? "" : "whitespace-pre-wrap",
+                  )}
+                >
+                  {item.itemType === "multi_turn" ? <Markdown text={item.questionText} /> : item.questionText}
                 </div>
               </div>
             </Card>
 
             <div className="flex items-baseline justify-between pt-1">
-              <h2 className="text-lg font-semibold">Responses</h2>
-              <p className="text-sm text-muted">Read each response in full. Authors are hidden.</p>
+              <h2 className="text-lg font-semibold">{def.candidateNoun}s</h2>
+              <p className="text-sm text-muted">
+                {item.itemType === "multi_turn"
+                  ? "Read each conversation in full. Evaluate only the clinician. Authors are hidden."
+                  : "Read each response in full. Authors are hidden."}
+              </p>
             </div>
 
             {responses.map((r) => (
@@ -267,6 +290,8 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
                 evaluation={state.responses[r.label]}
                 rank={state.ranking ? state.ranking.indexOf(r.label) + 1 : null}
                 config={config}
+                noun={def.candidateNoun}
+                criteria={def.criteria}
                 disabled={locked}
                 onChange={(next) => setResponse(r.label, next)}
               />
@@ -275,10 +300,10 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
             <Card className="flex flex-wrap items-center gap-4 px-5 py-4">
               <div className="min-w-0 flex-1 text-sm">
                 {problems.length === 0 ? (
-                  <span className="font-medium text-done">This question is complete.</span>
+                  <span className="font-medium text-done">This {def.unitNoun} is complete.</span>
                 ) : (
                   <>
-                    <span className="font-medium text-ink">Still needed for this question:</span>
+                    <span className="font-medium text-ink">Still needed for this {def.unitNoun}:</span>
                     <ul className="mt-1 list-disc pl-5 text-ink-2">
                       {problems.map((p) => (
                         <li key={p}>{p}</li>
@@ -292,12 +317,12 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
                   ← Previous
                 </Button>
                 {isLast ? (
-                  <Button size="lg" variant="primary" onClick={() => navigate("/submit")}>
+                  <Button size="lg" variant="primary" onClick={() => navigate(`/study/${study}/submit`)}>
                     Review &amp; submit →
                   </Button>
                 ) : (
                   <Button size="lg" variant="primary" onClick={() => goTo(position + 1)}>
-                    Save &amp; next question →
+                    Save &amp; next {def.unitNoun} →
                   </Button>
                 )}
               </div>
@@ -307,6 +332,7 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
           <aside className="lg:order-none -order-1">
             <div className="lg:sticky lg:top-[84px] lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto">
               <RankingPanel
+                noun={def.candidateNoun}
                 labels={labels}
                 ranking={state.ranking}
                 confirmed={state.rankingConfirmed}
@@ -322,7 +348,7 @@ export function Workspace({ payload, queue: initialQueue, reviewerCode, displayN
         </div>
       </main>
 
-      <InstructionsDialog open={instructionsOpen} onClose={() => setInstructionsOpen(false)} config={config} />
+      <InstructionsDialog open={instructionsOpen} onClose={() => setInstructionsOpen(false)} config={config} study={study} />
     </div>
   );
 }

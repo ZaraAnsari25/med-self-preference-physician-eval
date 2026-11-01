@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { InstrumentConfig } from "@/lib/rubric";
-import type { ReviewerProgress, ValidationReport } from "@/server/admin";
+import { STUDIES, STUDY_IDS, type StudyId } from "@/lib/studies";
+import type { ReviewerProgress, StudyProgress, ValidationReport } from "@/server/admin";
+import type { PlanStatus } from "@/server/plans";
+import { StudyPlanCard, type EligibleReviewer } from "./StudyPlanCard";
 import { Button, Card, cx, Pill, SectionLabel } from "./ui";
 
-type Reviewer = Omit<ReviewerProgress, "submittedAt" | "lastSavedAt"> & { submittedAt: string | null; lastSavedAt: string | null };
+type SerializedStudy = Omit<StudyProgress, "submittedAt" | "lastSavedAt"> & { submittedAt: string | null; lastSavedAt: string | null };
+export type Reviewer = Omit<ReviewerProgress, "studies"> & { studies: SerializedStudy[] };
 
 const DATASETS = [
   ["rankings", "Physician rankings", "One row per reviewer × question × response with final rank and confirmation."],
@@ -15,6 +18,8 @@ const DATASETS = [
   ["llm_judgments", "Original LLM judgments", "Every judge's rank and scores for imported questions."],
   ["response_key", "Response key (unblinding)", "response_id → generator model and original generation_id."],
   ["analysis", "Analysis-ready join", "Physician judgments × every LLM judge for the same response, joined by ID."],
+  ["plan", "Study plans", "Every planned case with its block (or calibration) and its graders by position."],
+  ["reviewers", "Reviewer background", "Reviewer code, specialty and years in practice; no names."],
 ] as const;
 
 async function post(url: string, body: unknown) {
@@ -26,16 +31,20 @@ async function post(url: string, body: unknown) {
 
 export function AdminPanel({
   reviewers,
-  itemCount,
+  itemCounts,
   validation,
-  config,
-  studySeed,
+  studySeeds,
+  plans,
+  eligible,
+  defaultPlanSeeds,
 }: {
   reviewers: Reviewer[];
-  itemCount: number;
+  itemCounts: Record<StudyId, number>;
   validation: ValidationReport;
-  config: InstrumentConfig;
-  studySeed: string | null;
+  studySeeds: Record<StudyId, string | null>;
+  plans: Record<StudyId, PlanStatus | null>;
+  eligible: Record<StudyId, EligibleReviewer[]>;
+  defaultPlanSeeds: Record<StudyId, string>;
 }) {
   const [message, setMessage] = useState<{ tone: "done" | "danger"; text: string } | null>(null);
   const run = async (fn: () => Promise<string | void>) => {
@@ -49,7 +58,9 @@ export function AdminPanel({
   };
 
   const physicians = reviewers.filter((r) => r.role === "reviewer");
-  const totals = physicians.reduce((a, r) => ({ assigned: a.assigned + r.assigned, complete: a.complete + r.complete }), { assigned: 0, complete: 0 });
+  const totals = physicians
+    .flatMap((r) => r.studies)
+    .reduce((a, s) => ({ assigned: a.assigned + s.assigned, complete: a.complete + s.complete }), { assigned: 0, complete: 0 });
 
   return (
     <main className="mx-auto max-w-[1300px] space-y-6 px-6 py-8">
@@ -64,11 +75,11 @@ export function AdminPanel({
         <div
           role="status"
           className={cx(
-            "flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm",
+            "sticky top-3 z-20 flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm shadow-md",
             message.tone === "done" ? "border-done-line bg-done-soft text-done" : "border-[#f5c2bd] bg-danger-soft text-danger",
           )}
         >
-          <span className="whitespace-pre-wrap">{message.text}</span>
+          <span className="whitespace-pre-wrap select-all">{message.text}</span>
           <button type="button" className="underline" onClick={() => setMessage(null)}>
             Dismiss
           </button>
@@ -76,7 +87,10 @@ export function AdminPanel({
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Questions imported" value={itemCount} />
+        <Stat
+          label="Imported"
+          value={STUDY_IDS.map((s) => `${itemCounts[s]} ${STUDIES[s].name}`).join(" · ")}
+        />
         <Stat label="Physician reviewers" value={physicians.length} />
         <Stat label="Assignments completed" value={`${totals.complete} / ${totals.assigned}`} />
         <Card className="p-4">
@@ -109,7 +123,7 @@ export function AdminPanel({
           <table className="w-full text-sm">
             <thead className="bg-subtle text-left text-xs uppercase tracking-wider text-muted">
               <tr>
-                {["Code", "Username", "Role", "Progress", "Status", "Last saved", ""].map((h) => (
+                {["Code", "Username", "Role", "Progress by study", "Last saved", ""].map((h) => (
                   <th key={h} className="px-4 py-2 font-semibold">
                     {h}
                   </th>
@@ -123,43 +137,59 @@ export function AdminPanel({
                   <td className="px-4 py-2.5">
                     {r.username}
                     {r.displayName && <span className="block text-xs text-muted">{r.displayName}</span>}
+                    {(r.specialty || r.yearsInPractice !== null) && (
+                      <span className="block text-xs text-muted">
+                        {[r.specialty, r.yearsInPractice !== null ? `${r.yearsInPractice} yrs` : null].filter(Boolean).join(" · ")}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5">{r.role}</td>
                   <td className="px-4 py-2.5">
-                    {r.role === "reviewer" ? (
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-28 overflow-hidden rounded-full bg-line">
-                          <div className="h-full bg-done" style={{ width: r.assigned ? `${(r.complete / r.assigned) * 100}%` : 0 }} />
-                        </div>
-                        <span className="tabular-nums text-ink-2">
-                          {r.complete}/{r.assigned}
-                        </span>
-                        {r.inProgress > 0 && <span className="text-xs text-progress">{r.inProgress} in progress</span>}
+                    {r.studies.length === 0 ? (
+                      <span className="text-muted">{r.role === "admin" ? "—" : "No questions assigned"}</span>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {r.studies.map((st) => (
+                          <div key={st.study} className="flex flex-wrap items-center gap-2">
+                            <span className="w-24 text-xs font-medium text-ink-2">{STUDIES[st.study].name}</span>
+                            <div className="h-2 w-24 overflow-hidden rounded-full bg-line">
+                              <div className="h-full bg-done" style={{ width: st.assigned ? `${(st.complete / st.assigned) * 100}%` : 0 }} />
+                            </div>
+                            <span className="tabular-nums text-ink-2">
+                              {st.complete} of {st.assigned} done
+                            </span>
+                            {st.submittedAt ? (
+                              <>
+                                <Pill tone="done">Submitted</Pill>
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    run(async () => void (await post("/api/admin/reopen", { userId: r.userId, study: st.study })))
+                                  }
+                                >
+                                  Reopen
+                                </Button>
+                              </>
+                            ) : st.complete === st.assigned ? (
+                              <Pill tone="progress">Ready to submit</Pill>
+                            ) : st.inProgress > 0 ? (
+                              <span className="text-xs text-progress">
+                                {st.inProgress} started ({st.inProgressNumbers.map((n) => `#${n}`).join(", ")})
+                              </span>
+                            ) : null}
+                          </div>
+                        ))}
                       </div>
-                    ) : (
-                      <span className="text-muted">—</span>
                     )}
+                    {!r.active && <Pill className="mt-1">Inactive</Pill>}
                   </td>
-                  <td className="px-4 py-2.5">
-                    {r.role === "admin" ? (
-                      <span className="text-muted">—</span>
-                    ) : r.submittedAt ? (
-                      <Pill tone="done">Submitted</Pill>
-                    ) : !r.active ? (
-                      <Pill>Inactive</Pill>
-                    ) : r.complete === r.assigned && r.assigned > 0 ? (
-                      <Pill tone="progress">Ready to submit</Pill>
-                    ) : (
-                      <Pill>Grading</Pill>
-                    )}
+                  <td className="px-4 py-2.5 text-xs text-muted">
+                    {(() => {
+                      const last = r.studies.map((st) => st.lastSavedAt).filter(Boolean).sort().at(-1);
+                      return last ? new Date(last).toLocaleString() : "—";
+                    })()}
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-muted">{r.lastSavedAt ? new Date(r.lastSavedAt).toLocaleString() : "—"}</td>
                   <td className="space-x-1 whitespace-nowrap px-4 py-2.5 text-right">
-                    {r.submittedAt && (
-                      <Button size="sm" onClick={() => run(async () => void (await post("/api/admin/reopen", { userId: r.userId })))}>
-                        Reopen
-                      </Button>
-                    )}
                     <Button
                       size="sm"
                       variant="ghost"
@@ -188,20 +218,44 @@ export function AdminPanel({
         </div>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <AssignForm reviewers={physicians} itemCount={itemCount} run={run} />
-        <CreateReviewerForm run={run} />
-      </div>
+      <section aria-labelledby="plans-heading" className="space-y-3">
+        <div>
+          <h2 id="plans-heading" className="text-lg font-semibold">
+            Study plans
+          </h2>
+          <p className="text-sm text-muted">Assign every physician their cases at once: calibration cases for everyone, then rotating blocks.</p>
+        </div>
+        {STUDY_IDS.map((st) => (
+          <StudyPlanCard
+            key={st}
+            study={st}
+            itemCount={itemCounts[st]}
+            status={plans[st]}
+            eligible={eligible[st]}
+            defaultSeed={defaultPlanSeeds[st]}
+            run={run}
+          />
+        ))}
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <ConfigForm config={config} run={run} />
+        <CreateReviewerForm run={run} />
         <Card className="p-5">
           <h2 className="mb-1 font-semibold">Importing questions</h2>
           <p className="text-sm text-ink-2">
-            Questions are imported from the prepared study bundle with <code className="font-mono text-xs">npm run db:import</code>. The
-            importer is insert-only and refuses to change any original response. Study seed:{" "}
-            <code className="font-mono text-xs">{studySeed ?? "not set"}</code>.
+            Questions are imported from the prepared study bundles with <code className="font-mono text-xs">npm run db:import</code>. The
+            importer is insert-only and refuses to change any original response.
           </p>
+          <dl className="mt-3 space-y-1 text-sm">
+            {STUDY_IDS.map((st) => (
+              <div key={st} className="flex gap-2">
+                <dt className="w-24 text-ink-2">{STUDIES[st].name}</dt>
+                <dd>
+                  {itemCounts[st]} {STUDIES[st].unitNoun}s · seed <code className="font-mono text-xs">{studySeeds[st] ?? "not set"}</code>
+                </dd>
+              </div>
+            ))}
+          </dl>
         </Card>
       </div>
 
@@ -245,65 +299,13 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 type Run = (fn: () => Promise<string | void>) => Promise<void>;
 const inputCls = "mt-1 block h-9 w-full rounded-lg border border-line bg-surface px-3 text-sm";
 
-function AssignForm({ reviewers, itemCount, run }: { reviewers: Reviewer[]; itemCount: number; run: Run }) {
-  const [selected, setSelected] = useState<string[]>([]);
-  const [start, setStart] = useState(1);
-  const [count, setCount] = useState(Math.min(5, itemCount) || 5);
-  return (
-    <Card className="p-5">
-      <h2 className="mb-1 font-semibold">Assign questions</h2>
-      <p className="mb-4 text-sm text-muted">
-        Questions follow the frozen sample order (1 to {itemCount}). Selected reviewers each get the same range, in their own counterbalanced
-        presentation order. Questions a reviewer already has are skipped.
-      </p>
-      <fieldset className="mb-4">
-        <legend className="mb-1.5 text-sm font-medium">Reviewers</legend>
-        <div className="flex flex-wrap gap-2">
-          {reviewers.map((r) => (
-            <label key={r.userId} className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm">
-              <input
-                type="checkbox"
-                checked={selected.includes(r.userId)}
-                onChange={(e) => setSelected((s) => (e.target.checked ? [...s, r.userId] : s.filter((x) => x !== r.userId)))}
-              />
-              <span className="font-mono">{r.reviewerCode}</span>
-              <span className="text-muted">{r.username}</span>
-            </label>
-          ))}
-          {reviewers.length === 0 && <span className="text-sm text-muted">No reviewers yet.</span>}
-        </div>
-      </fieldset>
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <label className="text-sm font-medium">
-          From sample question #
-          <input type="number" min={1} max={itemCount} value={start} onChange={(e) => setStart(Number(e.target.value))} className={inputCls} />
-        </label>
-        <label className="text-sm font-medium">
-          Number of questions
-          <input type="number" min={1} max={itemCount} value={count} onChange={(e) => setCount(Number(e.target.value))} className={inputCls} />
-        </label>
-      </div>
-      <Button
-        variant="primary"
-        disabled={!selected.length || itemCount === 0}
-        onClick={() =>
-          run(async () => {
-            const d = await post("/api/admin/assign", { reviewerIds: selected, start: start - 1, count });
-            const n = Object.values(d.results as Record<string, number>);
-            setTimeout(() => window.location.reload(), 1200);
-            return `Assigned ${n.join(", ")} new question(s) to ${n.length} reviewer(s).`;
-          })
-        }
-      >
-        Assign
-      </Button>
-    </Card>
-  );
-}
-
 function CreateReviewerForm({ run }: { run: Run }) {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [years, setYears] = useState("");
+  const [created, setCreated] = useState<{ username: string; reviewerCode: string; password: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   return (
     <Card className="p-5">
       <h2 className="mb-1 font-semibold">Add reviewer</h2>
@@ -319,53 +321,61 @@ function CreateReviewerForm({ run }: { run: Run }) {
           Display name (optional)
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inputCls} autoComplete="off" />
         </label>
+        <label className="text-sm font-medium">
+          Specialty (optional)
+          <input value={specialty} onChange={(e) => setSpecialty(e.target.value)} className={inputCls} autoComplete="off" />
+        </label>
+        <label className="text-sm font-medium">
+          Years in practice (optional)
+          <input type="number" min={0} max={70} value={years} onChange={(e) => setYears(e.target.value)} className={inputCls} />
+        </label>
       </div>
       <Button
         variant="primary"
         disabled={username.trim().length < 3}
         onClick={() =>
           run(async () => {
-            const d = await post("/api/admin/reviewers", { action: "create", username, displayName: displayName || undefined, role: "reviewer" });
+            const d = await post("/api/admin/reviewers", {
+              action: "create",
+              username,
+              displayName: displayName || undefined,
+              specialty: specialty || undefined,
+              yearsInPractice: years === "" ? undefined : Number(years),
+              role: "reviewer",
+            });
+            setCreated({ username: d.username, reviewerCode: d.reviewerCode, password: d.password });
+            setCopied(false);
             setUsername("");
             setDisplayName("");
-            return `Created ${d.username} (${d.reviewerCode}). Temporary password: ${d.password}\nShare it securely; it will not be shown again. Reload to see the reviewer in the table.`;
+            setSpecialty("");
+            setYears("");
+            return `Created ${d.username} (${d.reviewerCode}). Their temporary password is shown in the Add reviewer card below.`;
           })
         }
       >
         Create reviewer
       </Button>
+      {created && (
+        <div role="status" className="mt-4 rounded-lg border border-done-line bg-done-soft p-4 text-sm">
+          <p className="font-medium text-done">
+            Created {created.username} ({created.reviewerCode}). Copy this temporary password now; it is shown only once.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <code className="select-all rounded-md border border-done-line bg-surface px-3 py-1.5 font-mono text-base text-ink">{created.password}</code>
+            <Button
+              size="sm"
+              onClick={async () => {
+                await navigator.clipboard.writeText(created.password).catch(() => undefined);
+                setCopied(true);
+              }}
+            >
+              {copied ? "Copied" : "Copy password"}
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted">Lost it? Use Reset password next to their name in the reviewers table. Reload to see them in the plan cards.</p>
+        </div>
+      )}
     </Card>
   );
 }
 
-function ConfigForm({ config, run }: { config: InstrumentConfig; run: Run }) {
-  const [c, setC] = useState(config);
-  return (
-    <Card className="p-5">
-      <h2 className="mb-1 font-semibold">Instrument configuration</h2>
-      <p className="mb-4 text-sm text-muted">
-        Applies to all reviewers from their next save. The configuration in force is recorded with every assignment, so pilot arms can be compared.
-      </p>
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <label className="text-sm font-medium">
-          Five-axis rubric
-          <select value={c.rubricMode} onChange={(e) => setC({ ...c, rubricMode: e.target.value as InstrumentConfig["rubricMode"] })} className={inputCls}>
-            <option value="required">Required (all 40 scores)</option>
-            <option value="optional">Optional</option>
-            <option value="off">Hidden (ranking only)</option>
-          </select>
-        </label>
-        <label className="text-sm font-medium">
-          Clinical error assessment
-          <select value={c.errorMode} onChange={(e) => setC({ ...c, errorMode: e.target.value as InstrumentConfig["errorMode"] })} className={inputCls}>
-            <option value="optional">Shown (optional)</option>
-            <option value="off">Hidden</option>
-          </select>
-        </label>
-      </div>
-      <Button variant="primary" onClick={() => run(async () => void (await post("/api/admin/config", c)))}>
-        Save configuration
-      </Button>
-    </Card>
-  );
-}

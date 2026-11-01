@@ -3,17 +3,17 @@
 import { useState } from "react";
 import { Button } from "./ui";
 
-export function BeginButton({ disabled, label }: { disabled: boolean; label: string }) {
+export function BeginButton({ study, label }: { study: string; label: string }) {
   const [busy, setBusy] = useState(false);
   return (
     <Button
       variant="primary"
       size="lg"
-      disabled={disabled || busy}
+      disabled={busy}
       onClick={async () => {
         setBusy(true);
-        await fetch("/api/instructions", { method: "POST" });
-        window.location.href = "/evaluate";
+        await fetch(`/api/studies/${study}/instructions`, { method: "POST" });
+        window.location.href = `/study/${study}`;
       }}
     >
       {label} →

@@ -1,9 +1,10 @@
 // Administrator-only research exports. Rows are keyed by stable IDs
 // (question_id, item_id, response_id, judgment_id); nothing is matched by text.
 // Reviewers are identified only by pseudonymous reviewer_code.
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, isNull } from "drizzle-orm";
 import type { DB } from "@/db";
-import { assignments, items, llmJudgments, responseEvaluations, responseProvenance, responses, users } from "@/db/schema";
+import { assignments, items, llmJudgments, responseEvaluations, responseProvenance, responses, studyPlans, users } from "@/db/schema";
+import { blockLabel, slotLabel, type StudyPlan } from "@/lib/plan";
 
 export const EXPORT_DATASETS = [
   "rankings",
@@ -13,6 +14,8 @@ export const EXPORT_DATASETS = [
   "llm_judgments",
   "response_key",
   "analysis",
+  "plan",
+  "reviewers",
 ] as const;
 export type ExportDataset = (typeof EXPORT_DATASETS)[number];
 type Row = Record<string, string | number | boolean | null>;
@@ -45,20 +48,34 @@ async function physicianRows(db: DB) {
     .innerJoin(items, eq(items.itemId, assignments.itemId))
     .innerJoin(users, eq(users.userId, assignments.reviewerId))
     .where(eq(users.role, "reviewer"))
-    .orderBy(asc(users.reviewerCode), asc(assignments.queuePosition), asc(responseEvaluations.displayLabel));
+    .orderBy(asc(assignments.study), asc(users.reviewerCode), asc(assignments.queuePosition), asc(responseEvaluations.displayLabel));
 }
 
 function physicianBase(r: Awaited<ReturnType<typeof physicianRows>>[number]): Row {
   return {
+    study: r.i.study,
     reviewer_code: r.reviewerCode,
     assignment_id: r.a.assignmentId,
     question_id: r.i.sourceQuestionId,
     item_id: r.i.itemId,
     source_dataset: r.i.sourceDataset,
+    turn_count: r.i.turnCount,
     response_id: r.e.responseId,
     display_label: r.e.displayLabel,
     presentation_position: r.a.presentationOrder.indexOf(r.e.responseId) + 1,
     assignment_status: r.a.status,
+    ...planFields(r.a),
+  };
+}
+
+/** Where an assignment sits in its study plan (empty for manual assignments). */
+function planFields(a: typeof assignments.$inferSelect): Row {
+  return {
+    plan_id: a.planId,
+    physician_slot: a.planSlot === null ? null : slotLabel(a.planSlot),
+    block: a.planId === null ? null : blockLabel(a.isCalibration ? null : a.planBlock),
+    is_calibration: a.isCalibration,
+    transferred: a.transferredAt !== null,
   };
 }
 
@@ -82,7 +99,7 @@ async function judgmentRows(db: DB) {
     .from(llmJudgments)
     .innerJoin(items, eq(items.itemId, llmJudgments.itemId))
     .innerJoin(responseProvenance, eq(responseProvenance.responseId, llmJudgments.responseId))
-    .orderBy(asc(items.sampleIndex), asc(llmJudgments.judgeModel), asc(llmJudgments.originalRank));
+    .orderBy(asc(items.study), asc(items.sampleIndex), asc(llmJudgments.judgeModel), asc(llmJudgments.originalRank));
 }
 
 function judgmentFields(j: typeof llmJudgments.$inferSelect, prefix: string): Row {
@@ -139,16 +156,20 @@ export async function buildExport(db: DB, dataset: ExportDataset): Promise<Row[]
         .innerJoin(items, eq(items.itemId, assignments.itemId))
         .innerJoin(users, eq(users.userId, assignments.reviewerId))
         .where(eq(users.role, "reviewer"))
-        .orderBy(asc(users.reviewerCode), asc(assignments.queuePosition));
+        .orderBy(asc(assignments.study), asc(users.reviewerCode), asc(assignments.queuePosition));
       return rows.map(({ a, i, reviewerCode }) => {
         const cfg = a.instrumentConfig as { rubricMode?: string; errorMode?: string } | null;
         return {
+          study: i.study,
           reviewer_code: reviewerCode,
           assignment_id: a.assignmentId,
           question_id: i.sourceQuestionId,
           item_id: i.itemId,
+          turn_count: i.turnCount,
           specialty: i.specialty,
           sample_index: i.sampleIndex,
+          ...planFields(a),
+          transferred_at: iso(a.transferredAt),
           queue_position: a.queuePosition + 1,
           presentation_order: a.presentationOrder.join(";"),
           status: a.status,
@@ -168,8 +189,10 @@ export async function buildExport(db: DB, dataset: ExportDataset): Promise<Row[]
     }
     case "llm_judgments":
       return (await judgmentRows(db)).map(({ j, i, p }) => ({
+        study: i.study,
         question_id: i.sourceQuestionId,
         item_id: i.itemId,
+        turn_count: i.turnCount,
         response_id: j.responseId,
         generator_model: j.generatorModel,
         generator_family: p.generatorFamily,
@@ -181,8 +204,9 @@ export async function buildExport(db: DB, dataset: ExportDataset): Promise<Row[]
         .from(responseProvenance)
         .innerJoin(responses, eq(responses.responseId, responseProvenance.responseId))
         .innerJoin(items, eq(items.itemId, responses.itemId))
-        .orderBy(asc(items.sampleIndex), asc(responseProvenance.generatorModel));
+        .orderBy(asc(items.study), asc(items.sampleIndex), asc(responseProvenance.generatorModel));
       return rows.map(({ p, i }) => ({
+        study: i.study,
         question_id: i.sourceQuestionId,
         item_id: i.itemId,
         response_id: p.responseId,
@@ -195,6 +219,47 @@ export async function buildExport(db: DB, dataset: ExportDataset): Promise<Row[]
         response_text_sha256: p.responseTextSha256,
       }));
     }
+    case "plan": {
+      const plans = await db.select().from(studyPlans).orderBy(asc(studyPlans.study));
+      const live = await db
+        .select({ planId: assignments.planId, itemId: assignments.itemId, slot: assignments.planSlot, code: users.reviewerCode })
+        .from(assignments)
+        .innerJoin(users, eq(users.userId, assignments.reviewerId))
+        .where(isNull(assignments.transferredAt));
+      const itemRows = new Map((await db.select().from(items)).map((i) => [i.itemId, i]));
+      return plans.flatMap((p) => {
+        const design = p.design as StudyPlan;
+        const graders = (id: string) =>
+          live
+            .filter((a) => a.planId === p.planId && a.itemId === id)
+            .sort((x, y) => x.slot! - y.slot!)
+            .map((a) => `${slotLabel(a.slot!)}:${a.code}`)
+            .join(";");
+        const row = (id: string, block: number | null): Row => {
+          const i = itemRows.get(id)!;
+          return {
+            study: p.study,
+            plan_id: p.planId,
+            plan_seed: p.seed,
+            item_id: id,
+            question_id: i.sourceQuestionId,
+            specialty: i.specialty,
+            sample_index: i.sampleIndex,
+            block: blockLabel(block),
+            is_calibration: block === null,
+            graders: graders(id),
+          };
+        };
+        return [...design.calibration.map((id) => row(id, null)), ...design.blocks.flatMap((b, i) => b.map((id) => row(id, i + 1)))];
+      });
+    }
+    case "reviewers":
+      return (await db.select().from(users).where(eq(users.role, "reviewer")).orderBy(asc(users.reviewerCode))).map((u) => ({
+        reviewer_code: u.reviewerCode,
+        specialty: u.specialty,
+        years_in_practice: u.yearsInPractice,
+        active: u.active,
+      }));
     case "analysis": {
       const phys = await physicianRows(db);
       const judg = await judgmentRows(db);

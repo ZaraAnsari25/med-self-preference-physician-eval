@@ -1,11 +1,26 @@
 // Administrator operations. Callers must have verified role === "admin".
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, max, notInArray, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, max, notInArray, sql } from "drizzle-orm";
 import type { DB } from "@/db";
-import { assignments, items, llmJudgments, responseProvenance, responses, users } from "@/db/schema";
+import { assignments, items, llmJudgments, responseProvenance, responses, studyPlans, users } from "@/db/schema";
 import { sha256Hex } from "@/lib/hash";
 import { presentationOrder } from "@/lib/ordering";
+import type { StudyPlan } from "@/lib/plan";
+import { STUDIES, STUDY_IDS, type StudyId } from "@/lib/studies";
 import { getStudySeed } from "./settings";
+
+export interface StudyProgress {
+  study: StudyId;
+  assigned: number;
+  complete: number;
+  inProgress: number;
+  /** 1-based question numbers (as the physician sees them) that are started but not finished. */
+  inProgressNumbers: number[];
+  notStarted: number;
+  /** Set when every assignment in the study has been submitted. */
+  submittedAt: Date | null;
+  lastSavedAt: Date | null;
+}
 
 export interface ReviewerProgress {
   userId: string;
@@ -14,53 +29,90 @@ export interface ReviewerProgress {
   displayName: string | null;
   role: "reviewer" | "admin";
   active: boolean;
-  assigned: number;
-  complete: number;
-  inProgress: number;
-  notStarted: number;
-  submittedAt: Date | null;
-  lastSavedAt: Date | null;
+  specialty: string | null;
+  yearsInPractice: number | null;
+  studies: StudyProgress[];
 }
 
 export async function reviewerProgress(db: DB): Promise<ReviewerProgress[]> {
+  const people = await db.select().from(users).orderBy(asc(users.role), asc(users.reviewerCode));
   const rows = await db
     .select({
-      userId: users.userId,
-      reviewerCode: users.reviewerCode,
-      username: users.username,
-      displayName: users.displayName,
-      role: users.role,
-      active: users.active,
-      submittedAt: users.submittedAt,
-      assigned: sql<number>`count(${assignments.assignmentId})::int`,
+      reviewerId: assignments.reviewerId,
+      study: assignments.study,
+      assigned: sql<number>`count(*)::int`,
       complete: sql<number>`count(*) filter (where ${assignments.status} = 'complete')::int`,
       inProgress: sql<number>`count(*) filter (where ${assignments.status} = 'in_progress')::int`,
       notStarted: sql<number>`count(*) filter (where ${assignments.status} = 'not_started')::int`,
+      unsubmitted: sql<number>`count(*) filter (where ${assignments.submittedAt} is null)::int`,
+      submittedAt: max(assignments.submittedAt),
       lastSavedAt: max(assignments.lastSavedAt),
     })
-    .from(users)
-    .leftJoin(assignments, eq(assignments.reviewerId, users.userId))
-    .groupBy(users.userId)
-    .orderBy(asc(users.reviewerCode));
-  return rows;
+    .from(assignments)
+    .where(isNull(assignments.transferredAt))
+    .groupBy(assignments.reviewerId, assignments.study);
+  // Question numbers match the physician's own numbering: position in their live queue.
+  const queues = await db
+    .select({ reviewerId: assignments.reviewerId, study: assignments.study, status: assignments.status })
+    .from(assignments)
+    .where(isNull(assignments.transferredAt))
+    .orderBy(asc(assignments.reviewerId), asc(assignments.study), asc(assignments.queuePosition));
+  const startedNumbers = new Map<string, number[]>();
+  const seen = new Map<string, number>();
+  for (const a of queues) {
+    const key = `${a.reviewerId}\u0000${a.study}`;
+    const n = (seen.get(key) ?? 0) + 1;
+    seen.set(key, n);
+    if (a.status === "in_progress") startedNumbers.set(key, [...(startedNumbers.get(key) ?? []), n]);
+  }
+  return people.map((u) => ({
+    userId: u.userId,
+    reviewerCode: u.reviewerCode,
+    username: u.username,
+    displayName: u.displayName,
+    role: u.role,
+    active: u.active,
+    specialty: u.specialty,
+    yearsInPractice: u.yearsInPractice,
+    studies: rows
+      .filter((r) => r.reviewerId === u.userId)
+      .sort((a, b) => STUDY_IDS.indexOf(a.study) - STUDY_IDS.indexOf(b.study))
+      .map(({ study, assigned, complete, inProgress, notStarted, unsubmitted, submittedAt, lastSavedAt }) => ({
+        study,
+        assigned,
+        complete,
+        inProgress,
+        inProgressNumbers: startedNumbers.get(`${u.userId}\u0000${study}`) ?? [],
+        notStarted,
+        submittedAt: unsubmitted === 0 && submittedAt ? new Date(submittedAt) : null,
+        lastSavedAt: lastSavedAt ? new Date(lastSavedAt) : null,
+      })),
+  }));
 }
 
-export async function itemCount(db: DB): Promise<number> {
-  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(items);
-  return n;
+export async function itemCounts(db: DB): Promise<Record<StudyId, number>> {
+  const rows = await db.select({ study: items.study, n: sql<number>`count(*)::int` }).from(items).groupBy(items.study);
+  return Object.fromEntries(STUDY_IDS.map((s) => [s, rows.find((r) => r.study === s)?.n ?? 0])) as Record<StudyId, number>;
 }
 
 /**
- * Append items (by frozen sample order) to a reviewer's queue. `count` items
- * starting at sample index `start` are assigned; items the reviewer already
- * has are skipped. Presentation order is computed once and stored.
+ * Append items of one study (by frozen sample order) to a reviewer's queue for
+ * that study. `count` items starting at sample index `start` are assigned;
+ * items the reviewer already has are skipped. Presentation order is computed
+ * once and stored.
  */
-export async function assignItems(db: DB, reviewerId: string, opts: { start?: number; count: number }) {
-  const seed = await getStudySeed(db);
-  if (!seed) throw new Error("No study bundle has been imported");
+export async function assignItems(db: DB, reviewerId: string, opts: { study: StudyId; start?: number; count: number }) {
+  const { study } = opts;
+  const seed = await getStudySeed(db, study);
+  if (!seed) throw new Error(`No ${STUDIES[study].name} bundle has been imported`);
   const [reviewer] = await db.select().from(users).where(eq(users.userId, reviewerId));
   if (!reviewer) throw new Error("Reviewer not found");
-  if (reviewer.submittedAt) throw new Error("Reviewer has already submitted; reopen before adding questions");
+  const [submitted] = await db
+    .select({ id: assignments.assignmentId })
+    .from(assignments)
+    .where(and(eq(assignments.reviewerId, reviewerId), eq(assignments.study, study), isNotNull(assignments.submittedAt)))
+    .limit(1);
+  if (submitted) throw new Error(`Reviewer has already submitted ${STUDIES[study].name}; reopen before adding questions`);
 
   return db.transaction(async (tx) => {
     const already = await tx.select({ itemId: assignments.itemId }).from(assignments).where(eq(assignments.reviewerId, reviewerId));
@@ -70,6 +122,7 @@ export async function assignItems(db: DB, reviewerId: string, opts: { start?: nu
       .from(items)
       .where(
         and(
+          eq(items.study, study),
           sql`${items.sampleIndex} >= ${start} and ${items.sampleIndex} < ${start + opts.count}`,
           already.length ? notInArray(items.itemId, already.map((a) => a.itemId)) : undefined,
         ),
@@ -78,7 +131,7 @@ export async function assignItems(db: DB, reviewerId: string, opts: { start?: nu
     const [{ next }] = await tx
       .select({ next: sql<number>`coalesce(max(${assignments.queuePosition}) + 1, 0)::int` })
       .from(assignments)
-      .where(eq(assignments.reviewerId, reviewerId));
+      .where(and(eq(assignments.reviewerId, reviewerId), eq(assignments.study, study)));
     let position = next;
     for (const c of candidates) {
       const respIds = (await tx.select({ id: responses.responseId }).from(responses).where(eq(responses.itemId, c.itemId))).map(
@@ -88,6 +141,7 @@ export async function assignItems(db: DB, reviewerId: string, opts: { start?: nu
         assignmentId: randomUUID(),
         reviewerId,
         itemId: c.itemId,
+        study,
         queuePosition: position,
         presentationOrder: presentationOrder({
           studySeed: seed,
@@ -101,6 +155,13 @@ export async function assignItems(db: DB, reviewerId: string, opts: { start?: nu
     }
     return { assigned: candidates.length };
   });
+}
+
+export async function setReviewerProfile(db: DB, userId: string, profile: { specialty: string | null; yearsInPractice: number | null }) {
+  await db
+    .update(users)
+    .set({ specialty: profile.specialty?.trim() || null, yearsInPractice: profile.yearsInPractice })
+    .where(eq(users.userId, userId));
 }
 
 export async function setReviewerActive(db: DB, userId: string, active: boolean) {
@@ -166,6 +227,20 @@ export async function validateStudyData(db: DB): Promise<ValidationReport> {
     const order = a.presentationOrder;
     if (order.length !== ids.size || new Set(order).size !== order.length || order.some((id) => !ids.has(id))) {
       problems.push(`assignment ${a.assignmentId}: presentation order is not a permutation of the item's responses`);
+    }
+  }
+  // Every applied plan still gives each case its required number of (live) graders.
+  for (const plan of await db.select().from(studyPlans)) {
+    const design = plan.design as StudyPlan;
+    const live = new Map<string, number>();
+    for (const a of asg) {
+      if (a.planId === plan.planId && a.transferredAt === null) live.set(a.itemId, (live.get(a.itemId) ?? 0) + 1);
+    }
+    for (const id of design.calibration) {
+      if (live.get(id) !== plan.physicianCount) problems.push(`${plan.study} plan: calibration case ${id} has ${live.get(id) ?? 0} graders`);
+    }
+    for (const id of design.blocks.flat()) {
+      if (live.get(id) !== plan.gradersPerCase) problems.push(`${plan.study} plan: case ${id} has ${live.get(id) ?? 0} graders`);
     }
   }
   return {

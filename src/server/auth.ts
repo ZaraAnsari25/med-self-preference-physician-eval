@@ -14,13 +14,21 @@ export interface SessionUser {
   reviewerCode: string;
   displayName: string | null;
   role: Role;
-  instructionsAcknowledgedAt: Date | null;
-  submittedAt: Date | null;
+  /** { [study]: ISO timestamp } of acknowledged study instructions. */
+  instructionsAck: Record<string, string>;
 }
 
 export async function createUser(
   db: DB,
-  input: { username: string; password: string; role: Role; displayName?: string | null; reviewerCode?: string },
+  input: {
+    username: string;
+    password: string;
+    role: Role;
+    displayName?: string | null;
+    reviewerCode?: string;
+    specialty?: string | null;
+    yearsInPractice?: number | null;
+  },
 ) {
   if (input.password.length < 10) throw new Error("password must be at least 10 characters");
   const username = input.username.trim().toLowerCase();
@@ -37,6 +45,8 @@ export async function createUser(
       reviewerCode,
       username,
       displayName: input.displayName ?? null,
+      specialty: input.specialty?.trim() || null,
+      yearsInPractice: input.yearsInPractice ?? null,
       passwordHash,
       role: input.role,
       reviewerSlot,
@@ -92,7 +102,6 @@ function toSessionUser(u: typeof users.$inferSelect): SessionUser {
     reviewerCode: u.reviewerCode,
     displayName: u.displayName,
     role: u.role,
-    instructionsAcknowledgedAt: u.instructionsAcknowledgedAt,
-    submittedAt: u.submittedAt,
+    instructionsAck: u.instructionsAck ?? {},
   };
 }

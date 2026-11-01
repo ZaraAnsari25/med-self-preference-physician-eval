@@ -5,8 +5,8 @@ import type { ResponseEvaluation } from "@/lib/evaluation";
 import { scoreSum } from "@/lib/evaluation";
 import {
   ERROR_CATEGORIES,
-  RUBRIC_CRITERIA,
   SCORE_VALUES,
+  type Criterion,
   type CriterionKey,
   type ErrorCategory,
   type ErrorFlag,
@@ -21,15 +21,19 @@ interface Props {
   evaluation: ResponseEvaluation;
   rank: number | null;
   config: InstrumentConfig;
+  /** "Response" or "Conversation". */
+  noun: string;
+  /** Rubric wording for this study. */
+  criteria: readonly Criterion[];
   disabled: boolean;
   onChange: (next: ResponseEvaluation) => void;
 }
 
-export function ResponseCard({ response, evaluation, rank, config, disabled, onChange }: Props) {
+export function ResponseCard({ response, evaluation, rank, config, noun, criteria, disabled, onChange }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const bodyId = useId();
   const sum = scoreSum(evaluation);
-  const scored = RUBRIC_CRITERIA.filter((c) => evaluation.scores[c.key] != null).length;
+  const scored = criteria.filter((c) => evaluation.scores[c.key] != null).length;
 
   const setScore = (key: CriterionKey, value: number) => {
     const current = evaluation.scores[key];
@@ -45,7 +49,7 @@ export function ResponseCard({ response, evaluation, rank, config, disabled, onC
     >
       <header className="flex items-center gap-3 border-b border-line px-5 py-3">
         <h3 id={`${bodyId}-title`} className="text-[1.05rem] font-semibold">
-          Response {response.label}
+          {noun} {response.label}
         </h3>
         {rank !== null && <Pill tone="neutral">Ranked #{rank}</Pill>}
         {config.rubricMode !== "off" && (
@@ -61,7 +65,7 @@ export function ResponseCard({ response, evaluation, rank, config, disabled, onC
           aria-controls={bodyId}
           onClick={() => setCollapsed((c) => !c)}
         >
-          {collapsed ? "Show response" : "Collapse"}
+          {collapsed ? `Show ${noun.toLowerCase()}` : "Collapse"}
         </button>
       </header>
 
@@ -81,7 +85,7 @@ export function ResponseCard({ response, evaluation, rank, config, disabled, onC
                 Rubric scores · 0 = lowest, 5 = highest{config.rubricMode === "optional" ? " · optional" : ""}
               </SectionLabel>
               <div className="grid gap-y-2">
-                {RUBRIC_CRITERIA.map((c) => (
+                {criteria.map((c) => (
                   <ScoreRow
                     key={c.key}
                     label={c.label}
@@ -95,7 +99,7 @@ export function ResponseCard({ response, evaluation, rank, config, disabled, onC
             </div>
           )}
           {config.errorMode !== "off" && (
-            <ErrorAssessment evaluation={evaluation} disabled={disabled} onChange={onChange} label={response.label} />
+            <ErrorAssessment evaluation={evaluation} disabled={disabled} onChange={onChange} label={`${noun} ${response.label}`} />
           )}
         </div>
       )}
@@ -233,7 +237,7 @@ function ErrorAssessment({
       )}
       {evaluation.errorFlag !== null && evaluation.errorFlag !== "no" && (
         <textarea
-          aria-label={`Explanation for Response ${label} (optional)`}
+          aria-label={`Explanation for ${label} (optional)`}
           placeholder="Brief explanation (optional)"
           value={evaluation.errorNote}
           disabled={disabled}
@@ -249,16 +253,18 @@ function ErrorAssessment({
 
 function Transcript({ turns }: { turns: { role: "clinician" | "patient"; content: string }[] }) {
   return (
-    <ol className="space-y-3">
+    <ol className="space-y-3" aria-label="Conversation turns">
       {turns.map((t, i) => (
         <li
           key={i}
           className={cx(
             "rounded-lg border px-4 py-3",
-            t.role === "clinician" ? "border-line bg-surface" : "border-question-line bg-question",
+            t.role === "clinician" ? "mr-10 border-line-strong bg-surface" : "ml-10 border-line bg-subtle text-ink-2",
           )}
         >
-          <SectionLabel className="mb-1">{t.role === "clinician" ? "Clinician (evaluated)" : "Patient (context)"}</SectionLabel>
+          <SectionLabel className={cx("mb-1", t.role === "clinician" && "text-accent")}>
+            Turn {i + 1} · {t.role === "clinician" ? "Clinician (evaluated)" : "Patient (context)"}
+          </SectionLabel>
           <Markdown text={t.content} />
         </li>
       ))}

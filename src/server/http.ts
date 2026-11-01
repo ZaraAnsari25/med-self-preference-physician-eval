@@ -1,10 +1,22 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { getDb, type DB } from "@/db";
 import { SESSION_COOKIE, SESSION_TTL_MS, userForToken, type Role, type SessionUser } from "./auth";
+import { isStudyId, type StudyId } from "@/lib/studies";
 import { EvaluationError } from "./evaluations";
+
+/** Validate a [study] route segment: 404 for pages, 404 JSON for APIs. */
+export function pageStudy(value: string): StudyId {
+  if (!isStudyId(value)) notFound();
+  return value;
+}
+
+export function apiStudy(value: string): StudyId {
+  if (!isStudyId(value)) throw new HttpError(404, "Unknown study");
+  return value;
+}
 
 export async function currentUser(): Promise<SessionUser | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
@@ -32,8 +44,17 @@ export class HttpError extends Error {
 export async function requireApiUser(req: Request, role?: Role): Promise<{ user: SessionUser; db: DB }> {
   if (req.method !== "GET") await assertSameOrigin(req);
   const user = await currentUser();
-  if (!user) throw new HttpError(401, "Not signed in");
-  if (role && user.role !== role) throw new HttpError(403, "Not permitted");
+  if (!user) {
+    throw new HttpError(401, "You have been signed out (for example, your session expired or your password was reset). Log out, then sign in again.");
+  }
+  if (role && user.role !== role) {
+    throw new HttpError(
+      403,
+      role === "reviewer"
+        ? "This browser is now signed in as a different account (for example, admin in another tab). Log out and sign in again as the physician; use a separate browser or incognito window for the other account."
+        : "Not permitted for this account.",
+    );
+  }
   return { user, db: await getDb() };
 }
 

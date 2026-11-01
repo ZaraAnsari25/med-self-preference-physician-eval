@@ -18,11 +18,13 @@ General rules:
 
 | Column | Meaning |
 |---|---|
-| `question_id` | The original Real-POCQi `question_id` (UUID) from `data/question_sets/real_pocqi_questions.jsonl`. |
-| `item_id` | The app's ID for the evaluation unit: `pocqi_<question_id>`. Multi-turn items will encode scenario and turn count. |
+| `study` | `real_pocqi` or `medsp1000`. Every export row carries it; analyse the two studies separately. |
+| `question_id` | The original `question_id`: a Real-POCQi UUID from `real_pocqi_questions.jsonl`, or a MedSP1000 scenario ID (for example `mededportal_5102__scenario1`) from `medsp1000_generation_cases.jsonl`. |
+| `turn_count` | MedSP1000 only: the number of visible conversation turns (currently always 8). Empty for Real-POCQi. |
+| `item_id` | The app's ID for the evaluation unit: `pocqi_<question_id>`, or `medsp_<question_id>__t8` for MedSP1000 at 8 visible turns. |
 | `response_id` | Stable internal ID: `rsp_` + the first 20 hex characters of `sha256("response:" + generation_id)`. |
-| `generation_id` | The original generation ID from `real_pocqi_generations.jsonl`. This is the exact generation every LLM judge saw. |
-| `judgment_id` | The original judgment ID from `rubric_and_model_ranking.jsonl`. |
+| `generation_id` | The original generation ID from `real_pocqi_generations.jsonl` (Real-POCQi) or `medsp1000/generations.jsonl` (MedSP1000). This is the exact answer or conversation every LLM judge saw. |
+| `judgment_id` | The original judgment ID from that study's `rubric_and_model_ranking.jsonl`. |
 | `assignment_id` | One reviewer × one item. |
 | `reviewer_code` | Pseudonymous reviewer ID. |
 
@@ -36,6 +38,11 @@ One row per reviewer × question × response.
 | `display_label` | The label this reviewer saw (A–H). |
 | `presentation_position` | The 1-based position in which the response was shown to this reviewer. A = 1. |
 | `assignment_status` | `not_started`, `in_progress` or `complete`. |
+| `plan_id` | The study plan that created this assignment; empty only for local demo accounts. |
+| `physician_slot` | The plan position, `P1`–`P8`. |
+| `block` | `B1`–`B8`, or `calibration`; empty only for local demo accounts. |
+| `is_calibration` | `true` for the cases every physician in the study grades. |
+| `transferred` | `true` if this physician had started the case when their position was handed to a replacement. The replacement graded it fresh; **exclude transferred rows from analysis.** |
 | `final_rank` | 1 = best, 8 = worst. Empty until the reviewer has ordered the responses. Before confirmation, this is a draft. |
 | `ranking_confirmed` | `true` if the reviewer explicitly confirmed the ranking. **Use only confirmed rankings in analysis.** |
 | `ranking_confirmed_at` | When the ranking was confirmed. |
@@ -83,19 +90,23 @@ One row per reviewer × question.
 |---|---|
 | `specialty` | Real-POCQi specialty. |
 | `sample_index` | 0-based position in the frozen sample (`data/sample-manifest.json`). |
+| `plan_id`, `physician_slot`, `block`, `is_calibration` | As in `rankings`. |
+| `transferred_at` | When the assignment was handed over (see `transferred` in `rankings`). |
 | `queue_position` | 1-based position in this reviewer's queue. |
 | `presentation_order` | `response_id`s separated by `;`, in the order shown (A first). |
 | `status` | `not_started`, `in_progress` or `complete`. |
 | `ranking_confirmed_at`, `ranking_modified` | As in `rankings`. |
-| `rubric_mode`, `error_mode` | Instrument configuration at the last save. |
+| `rubric_mode`, `error_mode` | Instrument configuration at the last save (fixed at `required` and `optional` for the study). |
 | `active_seconds` | Time the question page was visible in the browser, summed across visits. Use as a burden measure. |
 | `revision` | Number of accepted saves. Every save is also kept in the `save_events` table. |
 | `assigned_at`, `started_at`, `completed_at`, `last_saved_at`, `submitted_at` | Lifecycle timestamps. |
 
 ## `llm_judgments`
 
-The original LLM judgments for the imported questions: the blinded rubric-plus-ranking
-condition, experiment `real_pocqi_combined_all_judges_v1`. One row per judge × response.
+The original LLM judgments for the imported items, in the blinded rubric-plus-ranking
+condition: experiment `real_pocqi_combined_all_judges_v1` for Real-POCQi, and
+`medsp1000_all_eight_judges_v2` (full 8-turn conversations) for MedSP1000. One row per
+judge × response.
 
 | Column | Meaning |
 |---|---|
@@ -142,3 +153,25 @@ Example uses:
 Rows exist for every assignment that has saved data. Filter on
 `physician_ranking_confirmed` and `physician_submitted` (or `assignment_status`) as the
 analysis plan requires.
+
+## `plan`
+
+One row per planned case: the design as applied, for reporting it exactly.
+
+| Column | Meaning |
+|---|---|
+| `study`, `plan_id`, `plan_seed` | Which plan, and the seed that generated it. |
+| `item_id`, `question_id`, `specialty`, `sample_index` | The case. |
+| `block`, `is_calibration` | `B1`–`B8`, or `calibration`. |
+| `graders` | The physicians currently grading it, as `P<slot>:<reviewer code>` separated by `;` (3 for block cases, 8 for calibration cases). |
+
+## `reviewers`
+
+Physician background for analysis covariates. No names or usernames.
+
+| Column | Meaning |
+|---|---|
+| `reviewer_code` | Pseudonymous reviewer ID, matching the other exports. |
+| `specialty` | As recorded by the study team. |
+| `years_in_practice` | As recorded by the study team. |
+| `active` | Whether the account is active. |

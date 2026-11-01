@@ -4,7 +4,7 @@
   "sample_size": 100,
   "sampling": "stratified by specialty; proportional allocation (largest remainder, min 1); hashSort within stratum; hashSort overall order",
   "source_repository": "DaneshjouLab/Medical-LLM-Self-Preference",
-  "source_commit": "a40d3617a2e55cb6fe4255198a4b05ba774c3f4c",
+  "source_commit": "2e0462248e33ab391b7afa457f1e06a2d4408e97",
   "source_dataset": "jjfenglab/Real-POCQi",
   "source_files": {
     "questions": {

@@ -4,8 +4,8 @@
 //   E2E_R1_PASSWORD=... E2E_R2_PASSWORD=... E2E_ADMIN_PASSWORD=... \
 //   npx tsx scripts/e2e-prototype.ts [--screenshots <dir>]
 //
-// Expects the demo accounts from `npm run demo:seed` (reviewer1, reviewer2, admin)
-// with no evaluations saved yet for question 1.
+// Expects a freshly seeded database (`npm run demo:seed`): reviewer1/reviewer2 for
+// Real-POCQi, sp-reviewer1 for MedSP1000, and admin, with nothing graded yet.
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { chromium, type Browser, type Page } from "playwright-core";
@@ -54,7 +54,7 @@ async function main() {
   check(page.url().endsWith("/instructions"), "first login lands on instructions");
   await shot(page, "01-instructions", true);
   await page.getByRole("button", { name: /Begin evaluation|Continue grading/ }).click();
-  await page.waitForURL(/\/evaluate\/1$/);
+  await page.waitForURL(/\/study\/real_pocqi\/q\/1$/);
   await page.getByText("Response H", { exact: true }).first().waitFor();
   await shot(page, "02-question-top");
 
@@ -125,17 +125,17 @@ async function main() {
     "question navigation shows question 1 completed",
   );
 
-  // Navigate to question 2 via Save & next; resume logic sends us back to 2 on /evaluate.
+  // Navigate to question 2 via Save & next; resume logic sends us back to 2 on /study/real_pocqi.
   await page.getByRole("button", { name: /Save & next question/ }).click();
-  await page.waitForURL(/\/evaluate\/2$/);
+  await page.waitForURL(/\/study\/real_pocqi\/q\/2$/);
   await page.locator("#response-C").getByRole("radio", { name: "Accuracy: 3" }).click();
   await waitSaved(page);
   // Simulated network failure: the save error is visible and Retry recovers without losing input.
-  await page.route("**/api/evaluations/2", (route) => route.abort("failed"));
+  await page.route("**/api/studies/real_pocqi/evaluations/2", (route) => route.abort("failed"));
   await page.locator("#response-C").getByRole("radio", { name: "Clinical utility: 2" }).click();
   await page.getByText("Save error").waitFor({ timeout: 15000 });
   check(await page.getByRole("alert").filter({ hasText: "Not saved" }).isVisible(), "failed save shows a visible error banner");
-  await page.unroute("**/api/evaluations/2");
+  await page.unroute("**/api/studies/real_pocqi/evaluations/2");
   await page.getByRole("button", { name: "Retry save" }).click();
   await waitSaved(page);
   await page.reload();
@@ -145,21 +145,21 @@ async function main() {
     "retry after failure persists the change",
   );
 
-  await page.goto(`${BASE}/evaluate`);
-  await page.waitForURL(/\/evaluate\/2$/);
+  await page.goto(`${BASE}/study/real_pocqi`);
+  await page.waitForURL(/\/study\/real_pocqi\/q\/2$/);
   check(true, "resume goes to first incomplete question (2)");
   check((await page.getByRole("button", { name: "Question 2, in progress" }).count()) === 1, "question 2 shows in progress");
   await shot(page, "05-question-nav-states");
 
   // Submit is blocked while incomplete.
-  await page.goto(`${BASE}/submit`);
+  await page.goto(`${BASE}/study/real_pocqi/submit`);
   check(await page.getByRole("button", { name: "Submit evaluations" }).isDisabled(), "submit disabled while questions incomplete");
   await shot(page, "06-submit-page", true);
 
   // --- Reviewer 2: independent view --------------------------------------
   const r2 = await login(browser, "reviewer2", process.env.E2E_R2_PASSWORD!);
   await r2.page.getByRole("button", { name: /Begin evaluation|Continue grading/ }).click();
-  await r2.page.waitForURL(/\/evaluate\/1$/);
+  await r2.page.waitForURL(/\/study\/real_pocqi\/q\/1$/);
   await r2.page.getByText("Response H", { exact: true }).first().waitFor();
   check(await r2.page.getByText("Not ranked yet.").isVisible(), "reviewer 2 does not see reviewer 1's ranking");
   check(
@@ -167,7 +167,7 @@ async function main() {
     "reviewer 2 does not see reviewer 1's scores",
   );
   const r1First = await page.context().newPage().then(async (p) => {
-    await p.goto(`${BASE}/evaluate/1`);
+    await p.goto(`${BASE}/study/real_pocqi/q/1`);
     await p.locator("#response-A .md").waitFor();
     return p.locator("#response-A .md").innerText();
   });
@@ -180,7 +180,7 @@ async function main() {
 
   // Reviewer 2 completes all five questions (scores + confirmed ranking) and submits.
   for (let q = 1; q <= 5; q++) {
-    await r2.page.goto(`${BASE}/evaluate/${q}`);
+    await r2.page.goto(`${BASE}/study/real_pocqi/q/${q}`);
     await r2.page.getByText("Response H", { exact: true }).first().waitFor();
     for (const label of "ABCDEFGH") {
       const card = r2.page.locator(`#response-${label}`);
@@ -193,20 +193,60 @@ async function main() {
     await r2.page.getByText("This question is complete.").waitFor();
     await waitSaved(r2.page);
   }
-  await r2.page.goto(`${BASE}/submit`);
+  await r2.page.goto(`${BASE}/study/real_pocqi/submit`);
   r2.page.once("dialog", (d) => d.accept());
   await r2.page.getByRole("button", { name: "Submit evaluations" }).click();
-  await r2.page.waitForURL(/\/done$/);
+  await r2.page.waitForURL(/\/study\/real_pocqi\/done$/);
   check(await r2.page.getByText("Thank you").isVisible(), "submission shows the thank-you page");
   await shot(r2.page, "08-done");
-  await r2.page.goto(`${BASE}/evaluate/1`);
+  await r2.page.goto(`${BASE}/study/real_pocqi/q/1`);
   check(await r2.page.getByText("submitted and are read-only").isVisible(), "submitted evaluations are shown read-only");
   check(await r2.page.getByRole("radio", { name: "Accuracy: 3" }).first().isDisabled(), "controls are disabled after submission");
-  const lockedSave = await r2.page.request.put(`${BASE}/api/evaluations/1`, {
+  const lockedSave = await r2.page.request.put(`${BASE}/api/studies/real_pocqi/evaluations/1`, {
     data: { state: { ranking: null, rankingConfirmed: false, rankingModified: false, responses: {} }, baseRevision: 99 },
     headers: { Origin: BASE },
   });
   check(lockedSave.status() === 423, `server rejects writes after submission (HTTP ${lockedSave.status()})`);
+
+  // --- MedSP1000 (separate login) -----------------------------------------
+  const sp = await login(browser, "sp-reviewer1", process.env.E2E_SP_PASSWORD ?? process.env.E2E_R1_PASSWORD!);
+  check(sp.page.url().endsWith("/study/medsp1000/instructions"), "MedSP1000 reviewer lands on MedSP1000 instructions");
+  check(await sp.page.getByText("Evaluate only the clinician", { exact: false }).first().isVisible(), "MedSP1000 instructions say to evaluate only the clinician");
+  await shot(sp.page, "09-medsp-instructions", true);
+  await sp.page.getByRole("button", { name: /Begin evaluation/ }).click();
+  await sp.page.waitForURL(/\/study\/medsp1000\/q\/1$/);
+  await sp.page.getByText("Conversation H", { exact: true }).first().waitFor();
+  check(await sp.page.getByText("Case information", { exact: true }).isVisible(), "case information panel shown");
+  const convs = sp.page.locator("section[id^='response-']");
+  check((await convs.count()) === 8, "eight conversation cards render");
+  const turnCounts = await convs.evaluateAll((els) => els.map((e) => e.querySelectorAll("ol[aria-label='Conversation turns'] > li").length));
+  check(turnCounts.every((n) => n === 8), `each conversation shows 8 turns (${turnCounts.join(", ")})`);
+  check((await sp.page.getByText("Turn 2 · Patient (context)").count()) === 8, "patient turns labelled as context");
+  check(
+    await sp.page.locator("#response-A").getByText("How factually and clinically accurate are the clinician's statements across the encounter?").isVisible(),
+    "multi-turn rubric wording shown",
+  );
+  check(!MODEL_PATTERN.test(await sp.page.locator("body").innerText()), "no model identity in MedSP1000 page text");
+  check(!sp.payloads.some((p) => MODEL_PATTERN.test(p)), "no model identity in any MedSP1000 HTTP payload");
+  await shot(sp.page, "10-medsp-scenario-top");
+  for (const label of "ABCDEFGH") {
+    const card = sp.page.locator(`#response-${label}`);
+    for (const crit of ["Accuracy", "Clinical utility", "Source quality", "Verifiability", "Completeness"]) {
+      await card.getByRole("radio", { name: `${crit}: 4` }).click();
+    }
+  }
+  await sp.page.getByRole("button", { name: "Move Conversation C up" }).click();
+  await sp.page.getByRole("button", { name: "Confirm ranking" }).click();
+  await sp.page.getByText("This scenario is complete.").waitFor();
+  await waitSaved(sp.page);
+  await sp.page.locator("#response-B").scrollIntoViewIfNeeded();
+  await shot(sp.page, "11-medsp-scored");
+  await sp.page.reload();
+  await sp.page.getByText("Conversation H", { exact: true }).first().waitFor();
+  check(await sp.page.getByText("Ranking confirmed. Moving any entry").isVisible(), "MedSP1000 ranking persists after refresh");
+  check((await sp.page.getByRole("button", { name: "Scenario 1, completed" }).count()) === 1, "scenario navigation shows scenario 1 completed");
+  const crossStudy = await sp.page.goto(`${BASE}/study/real_pocqi/q/1`);
+  check(crossStudy?.status() === 404, `MedSP1000 reviewer cannot open Real-POCQi questions (HTTP ${crossStudy?.status()})`);
 
   // --- Admin ----------------------------------------------------------------
   const admin = await login(browser, "admin", process.env.E2E_ADMIN_PASSWORD!);
@@ -221,8 +261,46 @@ async function main() {
   check(selfRows.length === 8, "analysis export identifies one self-judgment per response");
   const top = r1Rows.find((r: Record<string, unknown>) => r.physician_rank === 1 && r.display_label === "D");
   check(Boolean(top), "physician rank 1 is attached to the response shown as D");
+  const spRows = data.rows.filter((r: Record<string, unknown>) => r.study === "medsp1000" && r.physician_rank !== null);
+  check(spRows.length === 64 && spRows.every((r: Record<string, unknown>) => r.turn_count === 8), `analysis export joins MedSP1000 to 8-turn judgments (${spRows.length})`);
+  check(spRows.every((r: Record<string, unknown>) => r.llm_experiment_id === "medsp1000_all_eight_judges_v2"), "MedSP1000 rows use the 8-model judgments");
   const csv = await (await admin.page.request.get(`${BASE}/api/admin/export?dataset=rankings&format=csv`)).text();
-  check(csv.startsWith("reviewer_code,assignment_id,question_id"), "CSV export has header");
+  check(csv.startsWith("study,reviewer_code,assignment_id,question_id"), "CSV export has header");
+
+  // --- Study plan (admin) ------------------------------------------------------
+  const created: { username: string; password: string }[] = [];
+  for (let i = 1; i <= 8; i++) {
+    const res = await admin.page.request.post(`${BASE}/api/admin/reviewers`, {
+      data: { action: "create", username: `e2e-doc${i}`, role: "reviewer", specialty: "Internal Medicine", yearsInPractice: 5 + i },
+      headers: { Origin: BASE },
+    });
+    created.push(await res.json());
+  }
+  await admin.page.reload();
+  const card = admin.page.locator("div.rounded-xl", { has: admin.page.getByRole("heading", { name: "Real-POCQi", exact: true }) });
+  for (const c of created) await card.getByRole("checkbox", { name: new RegExp(c.username) }).check();
+  await card.getByRole("button", { name: "Preview plan" }).click();
+  await card.getByText("✓ Every block case has exactly 3 graders").waitFor();
+  check(await card.getByText("✓ Each physician has 40 different cases").isVisible(), "plan preview: each physician has 40 cases");
+  check(await card.getByText("✓ Every calibration case is graded by all 8 physicians").isVisible(), "plan preview: calibration graded by all 8");
+  await shot(admin.page, "12-plan-preview", true);
+  admin.page.once("dialog", (d) => d.accept());
+  await card.getByRole("button", { name: "Apply plan" }).click();
+  await admin.page.getByText("Plan applied: 320 assignments created.").waitFor();
+  await admin.page.reload();
+  check(await card.getByText("Plan applied", { exact: true }).isVisible(), "plan applied and shown on the dashboard");
+  check(await admin.page.getByText("All checks passed").isVisible(), "data check still passes with the plan");
+  await shot(admin.page, "13-plan-applied", true);
+  const planCsv = await (await admin.page.request.get(`${BASE}/api/admin/export?dataset=plan&format=json`)).json();
+  check(planCsv.row_count === 100, `plan export lists all 100 cases (${planCsv.row_count})`);
+
+  const doc = await login(browser, created[0].username, created[0].password);
+  check(doc.page.url().endsWith("/study/real_pocqi/instructions"), "plan physician lands on Real-POCQi instructions");
+  check(await doc.page.getByText("You have 40 questions assigned").isVisible(), "plan physician has 40 questions");
+  await doc.page.getByRole("button", { name: /Begin evaluation/ }).click();
+  await doc.page.waitForURL(/\/study\/real_pocqi\/q\/1$/);
+  check((await doc.page.getByRole("button", { name: /^Question 40, / }).count()) === 1, "question navigation runs to 40");
+  check(!(await doc.page.locator("body").innerText()).toLowerCase().includes("calibration"), "calibration cases are not labelled for physicians");
 
   await browser.close();
   console.log(failures ? `\n${failures} check(s) failed` : "\nAll end-to-end checks passed");

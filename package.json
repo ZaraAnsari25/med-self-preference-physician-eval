@@ -15,14 +15,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "data:fetch": "tsx scripts/fetch-source.ts",
-    "data:prepare": "tsx scripts/prepare-data.ts",
+    "data:prepare": "tsx scripts/prepare-data.ts && tsx scripts/prepare-medsp1000.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:import": "tsx scripts/import-bundle.ts",
     "user:create": "tsx scripts/create-user.ts",
     "demo:seed": "tsx scripts/seed-demo.ts",
     "test:e2e": "tsx scripts/e2e-prototype.ts",
-    "demo": "npm run data:fetch && npm run data:prepare && npm run demo:seed && next build && next start -p 3123"
+    "demo": "npm run data:fetch && npm run data:prepare && npm run demo:seed && next build && next start -p 3123",
+    "study:setup": "PGLITE_DIR=./.data/study tsx scripts/setup-study.ts",
+    "study:start": "PGLITE_DIR=./.data/study next start -p 3123"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

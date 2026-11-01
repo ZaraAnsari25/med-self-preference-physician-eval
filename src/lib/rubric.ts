@@ -21,6 +21,40 @@ export const RUBRIC_CRITERIA = [
   },
 ] as const;
 
+/**
+ * The same five axes in the MedSP1000 (multi-turn) wording, exactly as in the
+ * original judge prompt (src/judging/judge_medsp1000.py, full-trajectory view).
+ */
+export const RUBRIC_CRITERIA_MULTI_TURN = [
+  {
+    key: "accuracy",
+    label: "Accuracy",
+    question: "How factually and clinically accurate are the clinician's statements across the encounter?",
+  },
+  {
+    key: "clinical_utility",
+    label: "Clinical utility",
+    question: "How useful is the clinician's overall interaction for providing high-quality clinical care?",
+  },
+  {
+    key: "source_quality",
+    label: "Source quality",
+    question:
+      "How well grounded are the clinician's claims and recommendations in authoritative clinical knowledge? Do not require formal citations in dialogue.",
+  },
+  {
+    key: "verifiability",
+    label: "Verifiability",
+    question: "How specific, transparent, and checkable are the clinician's claims, reasoning, and recommendations?",
+  },
+  {
+    key: "completeness",
+    label: "Completeness",
+    question: "How completely does the clinician address the scenario using the information available over the full interaction?",
+  },
+] as const;
+
+export type Criterion = { key: CriterionKey; label: string; question: string };
 export type CriterionKey = (typeof RUBRIC_CRITERIA)[number]["key"];
 export const CRITERION_KEYS = RUBRIC_CRITERIA.map((c) => c.key) as CriterionKey[];
 export const SCORE_VALUES = [0, 1, 2, 3, 4, 5] as const;

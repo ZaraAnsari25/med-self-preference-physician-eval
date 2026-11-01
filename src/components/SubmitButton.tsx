@@ -3,16 +3,16 @@
 import { useState } from "react";
 import { Button } from "./ui";
 
-export function SubmitButton({ disabled }: { disabled: boolean }) {
+export function SubmitButton({ study, disabled }: { study: string; disabled: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async () => {
     if (!window.confirm("Submit all evaluations? They will be locked after submission.")) return;
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/submit", { method: "POST" });
+    const res = await fetch(`/api/studies/${study}/submit`, { method: "POST" });
     if (res.ok) {
-      window.location.href = "/done";
+      window.location.href = `/study/${study}/done`;
       return;
     }
     const body = await res.json().catch(() => ({}));

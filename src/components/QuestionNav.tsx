@@ -6,18 +6,20 @@ import { cx } from "./ui";
 const STATUS_TEXT = { complete: "completed", in_progress: "in progress", not_started: "not started" } as const;
 
 export function QuestionNav({
+  unitNoun,
   queue,
   current,
   onSelect,
   onSubmit,
 }: {
+  unitNoun: string;
   queue: QueueEntry[];
   current: number;
   onSelect: (position: number) => void;
   onSubmit: () => void;
 }) {
   return (
-    <nav aria-label="Questions" className="rounded-xl border border-line bg-surface px-4 py-3">
+    <nav aria-label={`${unitNoun[0].toUpperCase()}${unitNoun.slice(1)}s`} className="rounded-xl border border-line bg-surface px-4 py-3">
       <div className="flex flex-wrap items-center gap-1.5">
         {queue.map((q) => {
           const isCurrent = q.position === current;
@@ -27,8 +29,8 @@ export function QuestionNav({
               type="button"
               onClick={() => onSelect(q.position)}
               aria-current={isCurrent ? "page" : undefined}
-              aria-label={`Question ${q.position}, ${STATUS_TEXT[q.status]}`}
-              title={`Question ${q.position} · ${STATUS_TEXT[q.status]}`}
+              aria-label={`${unitNoun[0].toUpperCase()}${unitNoun.slice(1)} ${q.position}, ${STATUS_TEXT[q.status]}`}
+              title={`${unitNoun[0].toUpperCase()}${unitNoun.slice(1)} ${q.position} · ${STATUS_TEXT[q.status]}`}
               className={cx(
                 "h-8 min-w-9 rounded-md border px-1.5 font-mono text-[0.8rem] tabular-nums transition-colors",
                 isCurrent

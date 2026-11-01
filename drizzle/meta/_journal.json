@@ -8,6 +8,27 @@
       "when": 1792473023286,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793494302329,
+      "tag": "0001_studies",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793494311108,
+      "tag": "0002_drop_user_study_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793512846051,
+      "tag": "0003_study_plans",
+      "breakpoints": true
     }
   ]
 }
